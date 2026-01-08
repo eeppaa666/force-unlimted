@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "foxglove/Pose.proto";
+
+package controller;
+
+message UnitTreeLowState {
+    repeated double dual_arm_q = 1;
+    repeated double dual_arm_dq = 2;
+}
