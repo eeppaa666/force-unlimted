@@ -19,22 +19,22 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, UInt8MultiArray
 
-from teleop.tele_pose_pb2 import TeleState
-from teleop.src.common import TRACK_STATE_TOPIC
+from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.src.unitree.common import UNITREE_IK_SOL_TOPIC
 
 class MinimalSubscriber(Node):
     def __init__(self):
         super().__init__('minimal_subscriber')
         self.subscription = self.create_subscription(
             UInt8MultiArray,
-            TRACK_STATE_TOPIC,
+            UNITREE_IK_SOL_TOPIC,
             self.listener_callback,
             10)
         self.subscription  # prevent unused variable warning
 
     def listener_callback(self, msg: UInt8MultiArray):
         # 1. 创建一个空的 Protobuf 消息对象
-        state = TeleState()
+        state = UnitTreeIkSol()
 
         try:
             # 2. 关键步骤：将 ROS 消息的 data 字段转换为 bytes

@@ -6,7 +6,7 @@ from foxglove.Quaternion_pb2 import Quaternion
 
 def matrix_to_pose(matrix) -> Pose:
     if matrix.shape != (4, 4) or np.all(matrix[:3, :3] == 0):
-        return Pose()
+        return None
     # 1. 提取平移向量 (前三行，最后一列)
     position = matrix[:3, 3]
     # 2. 提取旋转矩阵 (左上角 3x3)

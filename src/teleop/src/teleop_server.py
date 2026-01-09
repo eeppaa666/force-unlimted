@@ -77,7 +77,9 @@ class TeleopPublisher(Node):
         state.right_ctrl_thumbstick_value.extend(self.tv.right_ctrl_thumbstickValue)
         state.right_ctrl_a_button = self.tv.right_ctrl_aButton
         state.right_ctrl_b_button = self.tv.right_ctrl_bButton
-        state.right_ee_pose.CopyFrom(matrix_to_pose(self.tv.right_arm_pose))
+        pose = matrix_to_pose(self.tv.right_arm_pose)
+        if pose is not None:
+            state.right_ee_pose.CopyFrom(pose)
 
         # left arm
         state.left_ctrl_trigger = self.tv.left_ctrl_trigger
@@ -88,10 +90,14 @@ class TeleopPublisher(Node):
         state.left_ctrl_thumbstick_value.extend(self.tv.left_ctrl_thumbstickValue)
         state.left_ctrl_a_button = self.tv.left_ctrl_aButton
         state.left_ctrl_b_button = self.tv.left_ctrl_bButton
-        state.left_ee_pose.CopyFrom(matrix_to_pose(self.tv.left_arm_pose))
+        pose = matrix_to_pose(self.tv.left_arm_pose)
+        if pose is not None:
+            state.left_ee_pose.CopyFrom(pose)
 
         # head pose
-        state.head_pose.CopyFrom(matrix_to_pose(self.tv.head_pose))
+        pose = matrix_to_pose(self.tv.head_pose)
+        if pose is not None:
+            state.head_pose.CopyFrom(pose)
 
         #TODO hand pose
 

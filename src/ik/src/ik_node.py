@@ -3,11 +3,12 @@ this_file = os.path.abspath(__file__)
 project_root = os.path.abspath(os.path.join(os.path.dirname(this_file), '../..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-sys.path.insert(0, os.path.join(project_root, 'proto/generate'))
+sys.path.insert(0, os.path.join(project_root, '../proto/generate'))
 
 import logging
 import argparse
 import threading
+import numpy as np
 
 from multiprocessing_logging import install_mp_handler
 logging.basicConfig(
@@ -31,45 +32,31 @@ class IkNode(Node):
         self._subscription = self.create_subscription(
             UInt8MultiArray,
             TRACK_STATE_TOPIC,
-            self._track_state_callback,
+            self.trackStateCallback,
             10)
         self._subscription  # prevent unused variable warning
         self._state_lock = threading.Lock()
         self._state = TeleState()
-        self._state_flush_cnt = 0
+        self._state_flush_cnt: np.uint = 0
 
-        self._ik_timer = self.create_timer(1.0 / args.frequency, self._ik_process_callback)
+        self._ik_timer = self.create_timer(1.0 / args.frequency, self.ikProcessCallback)
         from ik.src.unitree.g1_29_ik_processor import G129IkProcessor
         self._ik_processor: IKProcessor = G129IkProcessor(self)
 
-    def _ik_process_callback(self):
+    def ikProcessCallback(self):
         with self._state_lock:
+            if self._state_flush_cnt < 0:
+                return
             current_state = TeleState()
             current_state.CopyFrom(self._state)
+        self._ik_processor.Process(current_state)
 
-        left_ee_pose = current_state.left_ee_pose
-        right_ee_pose = current_state.right_ee_pose
-        self._ik_processor.process(left_ee_pose, right_ee_pose)
-
-    def _track_state_callback(self, msg: UInt8MultiArray):
-        self.get_logger().info('I heard: "%s"' % msg.data)
-        # 1. 创建一个空的 Protobuf 消息对象
+    def trackStateCallback(self, msg: UInt8MultiArray):
         state = TeleState()
         try:
-            # 2. 关键步骤：将 ROS 消息的 data 字段转换为 bytes
-            # msg.data 在 rclpy 中通常是一个 array.array 或 list
-            # Protobuf 的 ParseFromString 必须接收 bytes 对象
             binary_data = bytes(msg.data)
-
-            # 3. 反序列化
             state.ParseFromString(binary_data)
 
-            # from google.protobuf import json_format
-            # json_string = json_format.MessageToJson(state,
-            #     # always_print_fields_with_no_presence=True, # 强制包含默认值字段
-            #     preserving_proto_field_name=True    # 建议同时开启，保持字段名和 .proto 一致
-            # )
-            # print(json_string)
             with self._state_lock:
                 self._state.CopyFrom(state)
                 self._state_flush_cnt += 1
@@ -80,6 +67,7 @@ class IkNode(Node):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--frequency", type=float, default=30.0, help="Publishing frequency in Hz")
+    parser.add_argument('--log_level', type=str, default='info', help='Logging level')
 
     args, other_args = parser.parse_known_args()
 

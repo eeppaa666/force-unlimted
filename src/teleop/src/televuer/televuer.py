@@ -225,7 +225,7 @@ class TeleVuer:
 
     async def on_cam_move(self, event, session, fps=60):
         try:
-            logging.info(f"[TeleVuer] on_cam_move event received: {event.value}")
+            # logging.info(f"[TeleVuer] on_cam_move event received: {event.value}")
             with self.head_pose_shared.get_lock():
                 self.head_pose_shared[:] = event.value["camera"]["matrix"]
         except:

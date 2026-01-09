@@ -4,7 +4,7 @@ import "foxglove/Pose.proto";
 
 package teleop;
 
-//   坐标系图示 (右手系):
+//   openxr 坐标系图示 (右手系):
 //     Y ↑
 //       |
 //       |
@@ -15,6 +15,14 @@ package teleop;
 //     /
 //    Z
 
+//   robot 坐标系图示 (右手系):
+//          Z ↑
+//            |
+//            |   X
+//            |  /
+//            | /
+//    Y<------+
+//
 
 message TeleState {
     // right arm

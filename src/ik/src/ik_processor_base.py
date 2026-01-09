@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from foxglove.Pose_pb2 import Pose
+from teleop.tele_pose_pb2 import TeleState
 
 class IKProcessor(ABC):
     """数据处理的模板类"""
     @abstractmethod
-    def process(self, left_ee_pose: Pose, right_ee_pose: Pose):  # 模板方法（不可重写）
+    def Process(self, tele_state: TeleState):  # 模板方法（不可重写）
         pass
 
 class DemoTest(IKProcessor):
