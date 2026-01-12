@@ -23,7 +23,7 @@ def main():
 
     # 第二次解析：正式解析所有参数（命令行输入的参数会覆盖 YAML 里的默认值）
     print(remaining_argv)
-    args = parser.parse_args(remaining_argv)
+    args = parser.parse_args()
 
     print(f"Final params: {args}")
 

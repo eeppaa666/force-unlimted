@@ -1,6 +1,5 @@
 import time
 import asyncio
-import base64
 import argparse
 import os, sys
 this_file = os.path.abspath(__file__)
@@ -45,6 +44,14 @@ class FoxgloveNode(Node):
                 config = yaml.safe_load(f)  # 推荐使用safe_load避免执行任意代码
         except Exception as e:
             raise ValueError(f"Failed to load interested topics config {e}")
+
+        # 获取当前的 asyncio loop
+        # try:
+        #     self._loop = asyncio.get_event_loop()
+        # except RuntimeError as e:
+        #     print(f"{e}")
+        #     self._loop = asyncio.new_event_loop()
+
         self._subs = []
         for topic in config['topics']:
             sub = self.create_subscription(
@@ -58,14 +65,32 @@ class FoxgloveNode(Node):
 
     def cretateCallback(self, topic: str):
         def callback(msg: UInt8MultiArray):
-            out_msg = InMessage()
-            out_msg.topic = topic
-            out_msg.msg = bytes(msg.data)
-            out_msg.timestamp_ns = time.time_ns()
-            self._processor.Process(out_msg)
+            # logging.info(f"msg {topic}")
+            in_msg = InMessage()
+            in_msg.topic = topic
+            in_msg.data = bytes(msg.data)
+            in_msg.timestamp_ns = time.time_ns()
+            from converter.converter import Converter
+            converter = Converter()
+            def cb(out_msg: OutMessage):
+                # 如果 Process 也是耗时的，可以考虑将其也放入异步
+                self._processor.Process(out_msg)
+
+            converter.Convert(in_msg, cb)
+            # if self._loop.is_running():
+            #     # 我们调用之前写好的非阻塞 Convert
+            #     self._loop.call_soon_threadsafe(
+            #         lambda: converter.Convert(in_msg, cb)
+            #     )
+            # else:
+            #     # 如果 loop 没跑起来（比如纯同步环境），降级直接运行
+            #     # 但这通常不符合你的预期，建议确保 loop 在后台运行
+            #     print("Warning: asyncio loop is not running")
+
         return callback
 
-def main():
+
+async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--interested_topics', type=str, default=os.path.join(project_root, 'foxglove/config/interested_topics.yaml'), help='Path to the configuration file')
     parser.add_argument('--mode', type=str, default='live', help='run mode: repaly / live')
@@ -83,7 +108,14 @@ def main():
     try:
         rclpy.init(args=other_args)
         node = FoxgloveNode(args)
-        rclpy.spin(node)
+        while rclpy.ok():
+            # 驱动一次 ROS2 任务处理
+            # timeout_sec=0 表示立即返回，不阻塞 asyncio 循环
+            rclpy.spin_once(node, timeout_sec=0)
+
+            # 交还控制权给 asyncio，让 Foxglove Server 有机会运行
+            await asyncio.sleep(0.01)
+        # rclpy.spin(node)
         rclpy.shutdown()
     except KeyboardInterrupt:
         pass
@@ -92,4 +124,4 @@ def main():
         node.destroy_node()
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

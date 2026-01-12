@@ -2,14 +2,14 @@ import abc
 from dataclasses import dataclass
 import google.protobuf.message
 
-@dataclass
+# @dataclass
 class OutMessage:
     channel: str
-    msg: bytes | google.protobuf.message.Message
+    data: bytes | google.protobuf.message.Message
     timestamp_ns: int
 
-@dataclass
+# @dataclass
 class InMessage:
     topic: str
-    msg: bytes
+    data: bytes
     timestamp_ns: int

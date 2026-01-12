@@ -1,9 +1,21 @@
+import logging
 from foxglove.src.common.message import OutMessage, InMessage
+from typing import Callable
+from .handlers import *
+
+
+FUNCITONS = {
+    "/teleop/track_state": TeleopTrackState,
+}
 
 class Converter:
     def __init__(self):
         pass
 
-    def convert(self, data: bytes) -> bytes:
-        # 在这里实现具体的转换逻辑
-        return data
+    def Convert(self, data: InMessage, callback=None):
+        if data.topic in FUNCITONS:
+            FUNCITONS[data.topic](data, callback)
+        else:
+            logging.warning(f"cant processor this topic {data.topic}")
+
+
