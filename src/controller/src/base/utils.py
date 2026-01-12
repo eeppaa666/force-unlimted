@@ -1,8 +1,12 @@
 # utils.py
 import argparse
+import signal
+import sys
+import logging
+
 from typing import Callable, Optional
 
-def build_arg_parser(extra_args_fn: Optional[Callable[[argparse.ArgumentParser], None]] = None) -> argparse.ArgumentParser:
+def BuildArgParser(extra_args_fn: Optional[Callable[[argparse.ArgumentParser], None]] = None) -> argparse.ArgumentParser:
     """
     构建基础的 argparse Parser
 
@@ -53,3 +57,20 @@ def build_arg_parser(extra_args_fn: Optional[Callable[[argparse.ArgumentParser],
         extra_args_fn(parser)
 
     return parser
+
+def RegisterShutDownHook(stop_callback):
+    """
+    注册 Ctrl+C / kill 信号处理
+    stop_callback: stop_callback 函数
+    """
+
+    def _handler(signum, frame):
+        logging.info(f"[ShutdownHook] Received signal {signum}, shutting down...")
+        try:
+            stop_callback()
+        except Exception as e:
+            logging.error(f"[ShutdownHook] Error during Stop(): {e}")
+        sys.exit(0)
+
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, _handler)

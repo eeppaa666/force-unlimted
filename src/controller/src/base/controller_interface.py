@@ -21,7 +21,7 @@ class ControllerInterface(ABC):
         """优雅退出"""
         pass
 
-    # @abstractmethod
-    # def step(self):
-    #     """一次控制循环（可选）"""
-    #     pass
+    @abstractmethod
+    def IsRunnning(self):
+        """一次控制循环（可选）"""
+        pass
