@@ -8,8 +8,8 @@ FUNCITONS = {
     "/teleop/track_state": TeleopTrackState,
     "/unitree/ik/sol": UnitreeIKsol,
     "/unitree/fk/tfs": UnitreeFKtfs,
-    "/unitree/low_state": UnitreeLowState,
-    "/unitree/head_frame": ImageFrame,
+    "/unitree/controller/low_state": UnitreeLowState,
+    "/unitree/controller/head_frame": ImageFrame,
 }
 
 class Converter:

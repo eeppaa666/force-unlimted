@@ -84,8 +84,8 @@ from base.utils import BuildArgParser, RegisterShutDownHook, SaveImage, Str2Bool
 UNITREE_IK_SOL_TOPIC    = "/unitree/ik_sol"     # 上位机 IK 求解结果
 TRACK_STATE_TOPIC       = '/teleop/track_state' # 遥操作/状态机控制信号
 # pub topic
-UNITREE_LOW_STATE_TOPIC = "/unitree/low_state"  # 机器人双臂当前状态
-UNITREE_HEAD_FRAME      = "/unitree/head_frame"
+UNITREE_LOW_STATE_TOPIC = "/unitree/controller/low_state"  # 机器人双臂当前状态
+UNITREE_HEAD_FRAME      = "/unitree/controller/head_frame"
 
 logging.basicConfig(
     level=logging.INFO,
