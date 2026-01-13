@@ -16,8 +16,6 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'proto/generate'))
 
-from ik.src.unitree.weighted_moving_filter import WeightedMovingFilter
-
 class G1_29_ArmFK:
     def __init__(self, Unit_Test = False, Visualization = False):
         np.set_printoptions(precision=5, suppress=True, linewidth=200)
@@ -168,7 +166,8 @@ class G1_29_ArmFK:
         if len(q) != self.reduced_robot.model.nq:
             # 如果传入的 q 只有手臂部分，可能需要补全（假设其余锁定关节为0）
             # 这里简单处理，假设传入的就是 reduced_model 对应长度的 q
-            pass
+            logging.warning(f"fk node input q invalid q:{q}")
+            return None
 
         # 2. 计算 FK
         # pin.forwardKinematics 只更新 Joint

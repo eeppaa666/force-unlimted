@@ -46,7 +46,7 @@ class IkNode(Node):
 
     def ikProcessCallback(self):
         with self._state_lock:
-            if self._state_flush_cnt < 0:
+            if self._state_flush_cnt <= 0:
                 return
             current_state = TeleState()
             current_state.CopyFrom(self._state)

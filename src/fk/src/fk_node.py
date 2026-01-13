@@ -23,13 +23,13 @@ from std_msgs.msg import UInt8MultiArray
 
 from teleop.tele_pose_pb2 import TeleState
 from teleop.src.common import TRACK_STATE_TOPIC
-from ik.src.ik_processor_base import FKProcessor
+from fk.src.fk_processor_base import FKProcessor
 
 
-class IkNode(Node):
+class FkNode(Node):
     def __init__(self, args: argparse.Namespace):
-        super().__init__('ik_node')
-        logging.info(f"IK Node frequency set to: {args.frequency} Hz")
+        super().__init__('fk_node')
+        logging.info(f"FK Node frequency set to: {args.frequency} Hz")
         self._subscription = self.create_subscription(
             UInt8MultiArray,
             TRACK_STATE_TOPIC,
@@ -40,13 +40,13 @@ class IkNode(Node):
         self._state = TeleState()
         self._state_flush_cnt: np.uint = 0
 
-        self._ik_timer = self.create_timer(1.0 / args.frequency, self.ikProcessCallback)
-        from ik.src.unitree.g1_29_ik_processor import G129IkProcessor
-        self._ik_processor: FKProcessor = G129IkProcessor(self)
+        self._ik_timer = self.create_timer(1.0 / args.frequency, self.fkProcessCallback)
+        from fk.src.unitree.g1_29_fk_processor import G129FKProcessor
+        self._ik_processor: FKProcessor = G129FKProcessor(self)
 
-    def ikProcessCallback(self):
+    def fkProcessCallback(self):
         with self._state_lock:
-            if self._state_flush_cnt < 0:
+            if self._state_flush_cnt <= 0:
                 return
             current_state = TeleState()
             current_state.CopyFrom(self._state)
@@ -75,7 +75,7 @@ def main():
     logging.getLogger().setLevel(args.log_level.upper())
     try:
         rclpy.init(args=other_args)
-        node = IkNode(args)
+        node = FkNode(args)
         rclpy.spin(node)
         rclpy.shutdown()
     except KeyboardInterrupt:
