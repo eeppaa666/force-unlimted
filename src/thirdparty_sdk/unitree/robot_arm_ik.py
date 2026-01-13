@@ -16,7 +16,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'proto/generate'))
 
-from ik.src.unitree.weighted_moving_filter import WeightedMovingFilter
+from .weighted_moving_filter import WeightedMovingFilter
 
 class G1_29_ArmIK:
     def __init__(self, Unit_Test = False, Visualization = False):
