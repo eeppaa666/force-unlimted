@@ -7,4 +7,5 @@ message UnitTreeLowState {
     google.protobuf.Timestamp timestamp = 1;
     repeated double dual_arm_q = 2;
     repeated double dual_arm_dq = 3;
+    repeated double motor_q = 4;
 }

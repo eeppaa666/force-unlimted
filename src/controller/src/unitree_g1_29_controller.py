@@ -37,6 +37,12 @@ from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
 from thirdparty_sdk.unitree.robot_arm import G1_29_ArmController, G1_23_ArmController, H1_2_ArmController, H1_ArmController
 from thirdparty_sdk.unitree.robot_hand_unitree import Dex1_1_Gripper_Controller
 
+# teleimager package
+TELEIMAGER_PATH = os.path.join(project_root, "thirdparty_sdk/unitree/teleimager/src")
+if TELEIMAGER_PATH not in sys.path:
+    sys.path.insert(0, TELEIMAGER_PATH)
+from teleimager.image_client import ImageClient
+
 from multiprocessing import Value, Array, Lock
 from multiprocessing_logging import install_mp_handler
 import rclpy
@@ -82,6 +88,10 @@ class UnitreeG129Controller(ControllerInterface):
         self._simulation_mode = config.get("simulation_mode", bool)
         self._unitree_dds_fps = config.get("unitree_dds_fps", int)
         self._ros_msg_fps     = config.get("ros_msg_fps", int)
+        self._open_img_pub    = config.get("open_img_pub", bool)
+        self._image_encode    = config.get("img_encode", bool)
+        self._image_fps       = config.get("image_fps", int)
+        self._img_server_ip   = config.get("img_server_ip", str)
 
     def Start(self):
         self.__initUnitree()
@@ -151,6 +161,10 @@ class UnitreeG129Controller(ControllerInterface):
         # self._unitree_timer = self.ros_node.create_timer(1.0 / self._unitree_dds_fps, self.__unitreeMsgPub)
         self._msg_timer = self.ros_node.create_timer(1.0 / self._ros_msg_fps, self.__rosMsgPub)
 
+        if self._open_img_pub:
+            self._img_client = ImageClient(host=self._img_server_ip)
+            self._image_timer = self.ros_node.create_timer(1.0 / self._image_fps, self.__ImageMsgPub)
+
     def __messageCallback(self, topic_name, msg):
         self._msg_count += 1
 
@@ -217,8 +231,9 @@ class UnitreeG129Controller(ControllerInterface):
 
     def __rosMsgPub(self):
         msg = UInt8MultiArray()
-        current_lr_arm_q  = self._arm_ctrl.get_current_dual_arm_q()
-        current_lr_arm_dq = self._arm_ctrl.get_current_dual_arm_dq()
+        current_lr_arm_q   = self._arm_ctrl.get_current_dual_arm_q()
+        current_lr_arm_dq  = self._arm_ctrl.get_current_dual_arm_dq()
+        current_lr_motor_q = self._arm_ctrl.get_current_motor_q()
 
         try:
             timestamp = time.time_ns()
@@ -226,6 +241,7 @@ class UnitreeG129Controller(ControllerInterface):
             self._low_state.timestamp.nanos = timestamp % 1_000_000_000
             self._low_state.dual_arm_q.extend(current_lr_arm_q)
             self._low_state.dual_arm_dq.extend(current_lr_arm_dq)
+            self._low_state.motor_q.extend(current_lr_motor_q)
             binary_data = self._low_state.SerializeToString()
             msg.data = list(binary_data)
             self._publisher_control[UNITREE_LOW_STATE_TOPIC].publish(msg)
@@ -235,12 +251,27 @@ class UnitreeG129Controller(ControllerInterface):
         # logging.info(f"{UNITREE_LOW_STATE_TOPIC} Msg pub")
 
 
+    def __ImageMsgPub(self):
+        logging.info(f"Wellcome image pub")
+        img, fps = self._img_client.get_head_frame()
+        # cv2.imshow("head", img)
+        # cv2.waitKey(1)
+        print(self._img_client.get_head_frame())
+
+
+
+
+
 def ExtraContrilerArgs(parser):
     parser.description = "Unitree G1 specific controller"
-    parser.add_argument( "--motion_mode", type=bool, default=False, choices=["True", "False"], help="Unitree arm control motion_mode")
-    parser.add_argument( "--simulation_mode", type=bool, default=True, choices=["True", "False"], help="Unitree arm control simulation_mode, control Unitree dds, True mean dimain_id 1 else 0")
-    parser.add_argument( "--unitree_dds_fps", type=int, default=30, help="Unitree dds fps for simulation")
-    parser.add_argument( "--ros_msg_fps", type=int, default=30, help="Ros msg fps for other subscribe")
+    parser.add_argument("--motion_mode", type=bool, default=False, choices=["True", "False"], help="Unitree arm control motion_mode")
+    parser.add_argument("--simulation_mode", type=bool, default=True, choices=["True", "False"], help="Unitree arm control simulation_mode, control Unitree dds, True mean dimain_id 1 else 0")
+    parser.add_argument("--unitree_dds_fps", type=int, default=30, help="Unitree dds fps for simulation")
+    parser.add_argument("--ros_msg_fps", type=int, default=30, help="Ros msg fps for other subscribe")
+    parser.add_argument("--open_img_pub", type=bool, default=False, help="If open image pub")
+    parser.add_argument("--image_encode", type=bool, default=False, choices=["True", "False"], help="Image_encode for H265")
+    parser.add_argument("--image_fps", type=int, default=10, help="Image pub fps")
+    parser.add_argument("--img_server_ip", type=str, default="10.106.1.95", help="IP address of image server, used by teleimager and televuer")
 
     parser.set_defaults(rate_hz=30)
     parser.set_defaults(pub_topic_list=[UNITREE_LOW_STATE_TOPIC])
