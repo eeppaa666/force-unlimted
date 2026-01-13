@@ -9,6 +9,7 @@ FUNCITONS = {
     "/unitree/ik_sol": UnitreeIKsol,
     "/unitree/fk/tfs": UnitreeFKtfs,
     "/unitree/low_state": UnitreeLowState,
+    "/unitree/head_frame": ImageFrame,
 }
 
 class Converter:

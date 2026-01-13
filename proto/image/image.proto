@@ -1,0 +1,59 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+package image;
+
+/*
+ Generic Image Frame Message
+ Suitable for:
+ - Raw RGB/BGR frames
+ - JPEG / PNG compressed frames
+ - H264 / H265 encoded frames
+ - Depth images
+ - Stereo cameras
+*/
+
+message ImageFrame {
+
+  // ===== Timestamp =====
+  // Nanosecond-resolution timestamp (same style as TeleState)
+  google.protobuf.Timestamp timestamp = 1;
+
+
+  // ===== Image identification =====
+  string frame_id = 2;        // e.g. "head_left", "head_right", "hand_cam"
+  uint32 width    = 3;
+  uint32 height   = 4;
+  uint32 channels = 5;        // 1=gray, 3=RGB/BGR, 4=RGBA
+
+  // ===== Pixel format =====
+  enum PixelFormat {
+    PIXEL_FORMAT_UNKNOWN = 0;
+    GRAY8  = 1;
+    RGB8   = 2;
+    BGR8   = 3;
+    RGBA8  = 4;
+    BGRA8  = 5;
+    DEPTH16 = 6;   // uint16 depth map
+    FLOAT32 = 7;   // float depth / scientific images
+  }
+  PixelFormat pixel_format = 6;
+
+  // ===== Encoding =====
+  enum Encoding {
+    ENCODING_RAW   = 0;   // Uncompressed raw bytes
+    ENCODING_JPEG  = 1;
+    ENCODING_PNG   = 2;
+    ENCODING_H264  = 3;
+    ENCODING_H265  = 4;
+  }
+  Encoding encoding = 7;
+
+  // ===== Image payload =====
+  bytes data = 8;   // raw or encoded byte stream
+
+  // ===== Optional metadata =====
+  float fps = 9;                 // measured sender FPS
+  string camera_model = 10;      // e.g. "RealsenseD435"
+  map<string,string> extra = 11; // arbitrary metadata
+}

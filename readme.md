@@ -10,7 +10,7 @@ python3 src/ik/src/ik_node.py --frequency=60
 python3 src/ik/src/fk_node.py --frequency=60
 
 # 启动controller
-python3 src/controller/src/unitree_g1_29_controller.py --unitree_dds_fps 60 --ros_msg_fps 60
+python3 src/controller/src/unitree_g1_29_controller.py --unitree_dds_fps 60 --ros_msg_fps 60  --open_img_pub True
 
 # 启动 foxglove 可视化
 python3 src/foxglove/src/server.py

@@ -3,3 +3,4 @@ topics:
   - /unitree/ik_sol
   - /unitree/low_state
   - /unitree/fk/tfs
+  - /unitree/head_frame

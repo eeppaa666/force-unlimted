@@ -3,7 +3,11 @@ import argparse
 import signal
 import sys
 import logging
-
+import os
+import cv2
+import logging
+from datetime import datetime
+import numpy as np
 from typing import Callable, Optional
 
 def BuildArgParser(extra_args_fn: Optional[Callable[[argparse.ArgumentParser], None]] = None) -> argparse.ArgumentParser:
@@ -74,3 +78,50 @@ def RegisterShutDownHook(stop_callback):
 
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, _handler)
+
+def SaveImage(
+    img: np.ndarray,
+    save_dir: str = "./images",
+    filename: str = None,
+    encode: str = "png"
+) -> str:
+    """
+    通用图像保存函数
+
+    Args:
+        img: 要保存的 numpy 图像 (BGR)
+        save_dir: 保存目录，默认 ./images
+        filename: 文件名，不带后缀，默认按时间戳生成
+        encode: 保存格式，'png' 或 'jpg'
+
+    Returns:
+        保存的完整路径
+    """
+    if img is None:
+        logging.warning("No image provided to save.")
+        return ""
+
+    # 创建目录
+    os.makedirs(save_dir, exist_ok=True)
+
+    # 自动生成文件名
+    if filename is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"{timestamp}"
+
+    # 确定完整路径
+    encode = encode.lower()
+    if encode not in ["png", "jpg", "jpeg"]:
+        logging.warning(f"Unknown encode type '{encode}', default to 'png'")
+        encode = "png"
+
+    file_path = os.path.join(save_dir, f"{filename}.{encode}")
+
+    # 保存
+    success = cv2.imwrite(file_path, img)
+    if success:
+        logging.info(f"Saved image to {file_path}")
+    else:
+        logging.error(f"Failed to save image to {file_path}")
+
+    return file_path

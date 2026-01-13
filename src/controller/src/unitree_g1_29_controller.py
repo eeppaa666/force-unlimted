@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.join(project_root, '../proto/generate'))
 from controller.state_pb2 import UnitTreeLowState
 from ik.ik_sol_pb2 import UnitTreeIkSol
 from teleop.tele_pose_pb2 import TeleState
+from image.image_pb2 import ImageFrame
 
 from unitree_sdk2py.core.channel import ChannelPublisher, ChannelSubscriber, ChannelFactoryInitialize # dds
 from unitree_sdk2py.idl.unitree_hg.msg.dds_ import ( LowCmd_  as hg_LowCmd, LowState_ as hg_LowState) # idl for g1, h1_2
@@ -51,7 +52,7 @@ from std_msgs.msg import String, UInt8MultiArray
 
 
 from base.controller_interface import ControllerInterface
-from base.utils import BuildArgParser, RegisterShutDownHook
+from base.utils import BuildArgParser, RegisterShutDownHook, SaveImage
 
 # from loguru import logger
 # logger.debug(f"asdfasd {self.subscriber_list_}")
@@ -67,6 +68,7 @@ UNITREE_IK_SOL_TOPIC    = "/unitree/ik_sol"     # 上位机 IK 求解结果
 TRACK_STATE_TOPIC       = '/teleop/track_state' # 遥操作/状态机控制信号
 # pub topic
 UNITREE_LOW_STATE_TOPIC = "/unitree/low_state"  # 机器人双臂当前状态
+UNITREE_HEAD_FRAME      = "/unitree/head_frame"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,6 +85,7 @@ class UnitreeG129Controller(ControllerInterface):
         self._publisher_control = {}
         self._ik_sol      = UnitTreeIkSol()
         self._low_state   = UnitTreeLowState()
+        self._image_state = ImageFrame()
 
         self._motion_mode     = config.get("motion_mode", bool)
         self._simulation_mode = config.get("simulation_mode", bool)
@@ -252,13 +255,41 @@ class UnitreeG129Controller(ControllerInterface):
 
 
     def __ImageMsgPub(self):
-        logging.info(f"Wellcome image pub")
-        img, fps = self._img_client.get_head_frame()
-        # cv2.imshow("head", img)
-        # cv2.waitKey(1)
-        print(self._img_client.get_head_frame())
+        img, fps  = self._img_client.get_head_frame()
 
+        if img is not None:
+            timestamp = time.time_ns()
+            self._image_state.timestamp.seconds = timestamp // 1_000_000_000
+            self._image_state.timestamp.nanos = timestamp % 1_000_000_000
 
+            self._image_state.frame_id = UNITREE_HEAD_FRAME
+            self._image_state.width    = img.shape[1]
+            self._image_state.height   = img.shape[0]
+            self._image_state.channels = img.shape[2]
+
+            if not self._image_encode:
+                self._image_state.pixel_format = ImageFrame.BGR8
+                self._image_state.encoding = ImageFrame.ENCODING_H265
+                self._image_state.data = img.tobytes()
+            else:
+                self._image_state.pixel_format = ImageFrame.BGR8
+                self._image_state.encoding     = ImageFrame.ENCODING_JPEG
+                self._image_state.data = img.tobytes()
+
+            self._image_state.fps = fps
+            self._image_state.camera_model = "teleimager"
+
+            try:
+                msg = UInt8MultiArray()
+                binary_data = self._image_state.SerializeToString()
+                msg.data = list(binary_data)
+                self._publisher_control[UNITREE_HEAD_FRAME].publish(msg)
+            except Exception as e:
+                logging.error(f'SerializeToString Protobuf failed: {e}')
+            self._image_state.Clear()
+            # SaveImage(img)
+        if self._msg_count % 100 > 90:
+            logging.info(f"Pub {UNITREE_HEAD_FRAME} msg")
 
 
 
@@ -269,12 +300,12 @@ def ExtraContrilerArgs(parser):
     parser.add_argument("--unitree_dds_fps", type=int, default=30, help="Unitree dds fps for simulation")
     parser.add_argument("--ros_msg_fps", type=int, default=30, help="Ros msg fps for other subscribe")
     parser.add_argument("--open_img_pub", type=bool, default=False, help="If open image pub")
-    parser.add_argument("--image_encode", type=bool, default=False, choices=["True", "False"], help="Image_encode for H265")
+    parser.add_argument("--image_encode", type=bool, default=False, help="Image_encode for H265")
     parser.add_argument("--image_fps", type=int, default=10, help="Image pub fps")
     parser.add_argument("--img_server_ip", type=str, default="10.106.1.95", help="IP address of image server, used by teleimager and televuer")
 
     parser.set_defaults(rate_hz=30)
-    parser.set_defaults(pub_topic_list=[UNITREE_LOW_STATE_TOPIC])
+    parser.set_defaults(pub_topic_list=[UNITREE_LOW_STATE_TOPIC, UNITREE_HEAD_FRAME])
     parser.set_defaults(sub_topic_list=[UNITREE_IK_SOL_TOPIC, TRACK_STATE_TOPIC])
 
 
