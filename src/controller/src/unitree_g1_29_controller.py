@@ -37,6 +37,7 @@ from unitree_sdk2py.idl.default import unitree_hg_msg_dds__LowCmd_
 from thirdparty_sdk.unitree.robot_arm import G1_29_ArmController, G1_23_ArmController, H1_2_ArmController, H1_ArmController
 from thirdparty_sdk.unitree.robot_hand_unitree import Dex1_1_Gripper_Controller
 
+from multiprocessing import Value, Array, Lock
 from multiprocessing_logging import install_mp_handler
 import rclpy
 from rclpy.node import Node
@@ -152,8 +153,6 @@ class UnitreeG129Controller(ControllerInterface):
 
     def __messageCallback(self, topic_name, msg):
         self._msg_count += 1
-        if self._msg_count % 100 == 0:
-            logging.info(f"Received from {topic_name}: {msg.data}")
 
         if topic_name is UNITREE_IK_SOL_TOPIC:
             state = UnitTreeIkSol()
@@ -161,11 +160,13 @@ class UnitreeG129Controller(ControllerInterface):
                 binary_data = bytes(msg.data)
                 state.ParseFromString(binary_data)
                 self._arm_ctrl.ctrl_dual_arm(state.dual_arm_sol_q, state.dual_arm_sol_tauff)
-                ts = state.timestamp
-                ik_ms = ts.seconds * 1000000000 + ts.nanos
-                now_ms = time.time_ns()
-                delay_ms = now_ms - ik_ms
-                logging.info(f"Get {UNITREE_IK_SOL_TOPIC} msg, {ik_ms} ms, {delay_ms / 1000000} ms")
+                if self._msg_count % 100 > 95:
+                    logging.info(f"Get {UNITREE_IK_SOL_TOPIC} msg")
+                # ts = state.timestamp
+                # ik_ms = ts.seconds * 1000000000 + ts.nanos
+                # now_ms = time.time_ns()
+                # delay_ms = now_ms - ik_ms
+                # logging.info(f"Get {UNITREE_IK_SOL_TOPIC} msg, {ik_ms} ms, {delay_ms / 1000000} ms")
                 # self._ik_sol.CopyFrom(state)
                 # self.__unitreeMsgPub()
             except Exception as e:
@@ -176,15 +177,25 @@ class UnitreeG129Controller(ControllerInterface):
             try:
                 binary_data = bytes(msg.data)
                 state.ParseFromString(binary_data)
+                left_ctrl_triggerValue  = 10.0 - state.left_ctrl_trigger_value * 10,
+                right_ctrl_triggerValue = 10.0 - state.right_ctrl_trigger_value * 10,
                 with self._left_gripper_value.get_lock():
-                    self._left_gripper_value.value = state.left_ctrl_triggerValue
+                    self._left_gripper_value.value = left_ctrl_triggerValue[0]
                 with self._right_gripper_value.get_lock():
-                    self._right_gripper_value.value = state.right_ctrl_triggerValue
-                ts = state.timestamp
-                ik_ms = ts.seconds * 1000000000 + ts.nanos
-                now_ms = time.time_ns()
-                delay_ms = now_ms - ik_ms
-                logging.info(f"Get {TRACK_STATE_TOPIC} msg, {ik_ms} ms, {delay_ms / 1000000} ms")
+                    self._right_gripper_value.value = right_ctrl_triggerValue[0]
+                if self._msg_count % 100 > 95:
+                    logging.info(f"Get {TRACK_STATE_TOPIC} msg")
+                # from google.protobuf import json_format
+                # json_string = json_format.MessageToJson(state,
+                #     always_print_fields_with_no_presence=True, # 强制包含默认值字段
+                #     preserving_proto_field_name=True    # 建议同时开启，保持字段名和 .proto 一致
+                # )
+                # print(json_string)
+                # ts = state.timestamp
+                # ik_ms = ts.seconds * 1000000000 + ts.nanos
+                # now_ms = time.time_ns()
+                # delay_ms = now_ms - ik_ms
+                # logging.info(f"Get {TRACK_STATE_TOPIC} msg, {ik_ms} ms, {delay_ms / 1000000} ms")
                 # self._ik_sol.CopyFrom(state)
                 # self.__unitreeMsgPub()
             except Exception as e:
