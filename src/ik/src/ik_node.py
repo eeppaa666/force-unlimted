@@ -39,6 +39,7 @@ class IkNode(Node):
         self._state_lock = threading.Lock()
         self._state = TeleState()
         self._state_flush_cnt: np.uint = 0
+        self._state_prev_cnt: np.uint = 0
 
         self._ik_timer = self.create_timer(1.0 / args.frequency, self.ikProcessCallback)
         from ik.src.unitree.g1_29_ik_processor import G129IkProcessor
@@ -48,37 +49,23 @@ class IkNode(Node):
         with self._state_lock:
             if self._state_flush_cnt <= 0:
                 return
+            if self._state_prev_cnt == self._state_flush_cnt:
+                return
+            self._state_prev_cnt = self._state_flush_cnt
+
             current_state = TeleState()
             current_state.CopyFrom(self._state)
-        import time
-        ts = current_state.timestamp
-        ik_ms = ts.seconds * 1000000000 + ts.nanos
-        now_ms = time.time_ns()
-        delay_ms = now_ms - ik_ms
-        logging.info(f"process msg, {ik_ms} ms, {delay_ms / 1000000} ms")
+
         self._ik_processor.Process(current_state)
-        ts = current_state.timestamp
-        ik_ms = ts.seconds * 1000000000 + ts.nanos
-        now_ms = time.time_ns()
-        delay_ms = now_ms - ik_ms
-        logging.info(f"process msg, {ik_ms} ms, {delay_ms / 1000000} ms")
 
     def trackStateCallback(self, msg: UInt8MultiArray):
         state = TeleState()
         try:
             binary_data = bytes(msg.data)
             state.ParseFromString(binary_data)
-
             with self._state_lock:
                 self._state.CopyFrom(state)
                 self._state_flush_cnt += 1
-            import time
-            ts = state.timestamp
-            ik_ms = ts.seconds * 1000000000 + ts.nanos
-            now_ms = time.time_ns()
-            delay_ms = now_ms - ik_ms
-            logging.info(f"Callback msg, {ik_ms} ms, {delay_ms / 1000000} ms")
-            
         except Exception as e:
             self.get_logger().error(f'解析 Protobuf 失败: {e}')
 

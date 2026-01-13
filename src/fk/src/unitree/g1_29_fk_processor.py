@@ -6,16 +6,17 @@ from rclpy.node import Node
 from std_msgs.msg import UInt8MultiArray
 
 from fk.src.fk_processor_base import FKProcessor
-from ik.src.unitree.common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC
+from ik.src.unitree.common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC, Matrix2Pose
 
 from .root_arm_fk import G1_29_ArmFK
-from .common import UNITREE_FK_TRANSFRAME
+from .common import UNITREE_FK_TRANSFRAME, TimeNs2GoogleTs
 
 # proto
 from ik.ik_sol_pb2 import UnitTreeIkSol
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
 from foxglove.FrameTransforms_pb2 import FrameTransforms
+from foxglove.FrameTransform_pb2 import FrameTransform
 
 class G129FKProcessor(FKProcessor):
     def __init__(self, node: Node):
@@ -72,12 +73,36 @@ class G129FKProcessor(FKProcessor):
             low_state_copy.CopyFrom(self._low_state)
         cur_dual_arm_q = np.array(low_state_copy.dual_arm_q) if len(low_state_copy.dual_arm_q) == 14 else None
         # cur_dual_arm_dq = np.array(low_state_copy.dual_arm_dq) if len(low_state_copy.dual_arm_dq) == 14 else None
+
         with self._ik_sol_lock:
-            ik_sol_q = self._ik_sol.dual_arm_sol_q
+            ik_sol_q = np.array(self._ik_sol.dual_arm_sol_q, dtype=np.float64)
 
         # ik_sol fk
         tfs = self._arm_fk.compute_all_fk(ik_sol_q)
-        print(tfs)
-
+        # print(len(tfs), tfs.keys())
+        if tfs is None:
+            return
         msg = FrameTransforms()
+        tf = FrameTransform()
+        tf.parent_frame_id = "world"
+        tf.child_frame_id = "robot"
+        msg.transforms.append(tf)
+        for link_name, pose in tfs.items():
+            translation = pose.translation  # numpy array [x, y, z]
+            rotation = pose.rotation        # 3x3 rotation matrix
+            # print(pose.rotation)
+            # 将旋转矩阵转为四元数（可选）
+            from scipy.spatial.transform import Rotation as R
+            from foxglove.Quaternion_pb2 import Quaternion
+            from foxglove.Vector3_pb2 import Vector3
+            quat = R.from_matrix(rotation).as_quat()
+            msg.transforms.append(
+                FrameTransform(
+                    parent_frame_id="robot",
+                    child_frame_id=link_name,
+                    timestamp=TimeNs2GoogleTs(time.time_ns()),
+                    translation=Vector3(x=translation[0], y=translation[1], z=translation[2]),
+                    rotation=Quaternion(x=quat[0], y=quat[1], z=quat[2], w=quat[3]),
+                )
+            )
         self._publisher.publish(UInt8MultiArray(data=msg.SerializeToString()))

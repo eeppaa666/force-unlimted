@@ -53,8 +53,7 @@ class TeleopPublisher(Node):
 
         image_time_priod = 1.0 / args.image_frequency
         self.image_timer = self.create_timer(image_time_priod, self._timer_image_callback)
-
-        self.i = 0
+        self.start_track = False
 
     def __del__(self):
         self.tv.close()
@@ -68,6 +67,17 @@ class TeleopPublisher(Node):
             # break
 
     def _timer_pub_callback(self):
+        if self.tv.left_ctrl_aButton == True and not self.start_track:
+            self.start_track = True
+            logging.info("start teleop track")
+
+        if self.tv.left_ctrl_bButton == True and self.start_track:
+            self.start_track = False
+            logging.info("stop teleop track")
+
+        if not self.start_track:
+            return
+
         state = TeleState()
         state.timestamp.seconds = time.time_ns() // 1_000_000_000
         state.timestamp.nanos = time.time_ns() % 1_000_000_000

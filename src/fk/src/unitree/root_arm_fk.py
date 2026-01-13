@@ -109,7 +109,12 @@ class G1_29_ArmFK:
         self.L_hand_id = self.reduced_robot.model.getFrameId("L_ee")
         self.R_hand_id = self.reduced_robot.model.getFrameId("R_ee")
 
-
+        # 获取详细的 q 向量布局
+        model = self.reduced_robot.model
+        for i in range(1, model.njoints):
+            joint = model.joints[i]
+            name = model.names[i]
+            print(f"q[{joint.idx_q}] 对应关节: {name}")
 
      # Save both robot.model and reduced_robot.model
     def save_cache(self):
@@ -163,17 +168,24 @@ class G1_29_ArmFK:
         :return: 字典 { frame_name: 4x4_transform_matrix }
         """
         # 1. 确保 q 的维度正确
-        if len(q) != self.reduced_robot.model.nq:
+        if q is None or len(q) != self.reduced_robot.model.nq:
             # 如果传入的 q 只有手臂部分，可能需要补全（假设其余锁定关节为0）
             # 这里简单处理，假设传入的就是 reduced_model 对应长度的 q
-            logging.warning(f"fk node input q invalid q:{q}")
+            logging.warning(f"fk node input q invalid q:{q} nq:{self.reduced_robot.model.nq}")
             return None
+        # 1. 创建符合 Pinocchio 要求的全 0 向量 (nq 应该是 14)
+        q_pin = pin.neutral(self.reduced_robot.model)
+
+        # 2. 根据映射关系填值
+        # 这样无论 Pinocchio 内部顺序如何，都能保证值给到了正确的关节
+        # for input_idx, pin_q_idx in enumerate(self.q_index_map):
+        #     q_pin[pin_q_idx] = q[input_idx]
 
         # 2. 计算 FK
         # pin.forwardKinematics 只更新 Joint
         # pin.framesForwardKinematics 更新 Joint 并同步更新所有 Frame (Link)
         pin.framesForwardKinematics(self.reduced_robot.model, self.data, q)
-
+        # self.reduced_robot.framesForwardKinematics(q_pin)
         # 3. 提取所有 Frame 的变换矩阵
         frames_transforms = {}
         for i in range(self.reduced_robot.model.nframes):
@@ -182,6 +194,8 @@ class G1_29_ArmFK:
 
             # oMf (Object-to-Frame) 是相对于世界坐标系的位姿 SE3
             # .homogeneous() 返回 4x4 numpy 矩阵
-            frames_transforms[frame_name] = self.data.oMf[i].homogeneous()
+            # frames_transforms[frame_name] = self.data.oMf[i].homogeneous
+            frames_transforms[frame_name] = self.data.oMf[i]
+            # frames_transforms[frame_name] = self.reduced_robot.data.oMf[i]
 
         return frames_transforms

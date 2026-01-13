@@ -39,6 +39,7 @@ class FkNode(Node):
         self._state_lock = threading.Lock()
         self._state = TeleState()
         self._state_flush_cnt: np.uint = 0
+        self._state_prev_cnt: np.uint = 0
 
         self._ik_timer = self.create_timer(1.0 / args.frequency, self.fkProcessCallback)
         from fk.src.unitree.g1_29_fk_processor import G129FKProcessor
@@ -48,8 +49,12 @@ class FkNode(Node):
         with self._state_lock:
             if self._state_flush_cnt <= 0:
                 return
+            if self._state_prev_cnt == self._state_flush_cnt:
+                return
+            self._state_prev_cnt = self._state_flush_cnt
             current_state = TeleState()
             current_state.CopyFrom(self._state)
+
         self._ik_processor.Process(current_state)
 
     def trackStateCallback(self, msg: UInt8MultiArray):
