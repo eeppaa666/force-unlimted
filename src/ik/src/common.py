@@ -1,6 +1,11 @@
+# unitree
 UNITREE_IK_SOL_TOPIC = "/unitree/ik/sol"
 UNITREE_LOW_STATE_TOPIC = "/unitree/controller/low_state"
 # UNITREE_DEBUG_TOPIC = "/unitree/ik/debug_info"
+
+# fourier
+FOURIER_IK_SOL_TOPIC = "/fourier/ik/sol"
+FOURIER_LOW_STATE_TOPIC = "/fourier/controller/low_state"
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -113,10 +118,7 @@ def Pose2matrix(pose: Pose) -> np.ndarray:
     matrix[:3, :3] = rotation_matrix
     return matrix
 
-#TODO
-# def Unitree2RobotForHandPose(ee_mat: np.ndarray, head_mat: np.ndarray) -> np.ndarray:
-
-def Unitree2RobotForEEPose(ee_mat: np.ndarray, head_mat: np.ndarray) -> np.ndarray:
+def WebXR2RobotForEEPose(ee_mat: np.ndarray, head_mat: np.ndarray) -> np.ndarray:
     # Controller pose data directly follows the (initial pose) Unitree Humanoid Arm URDF Convention (thus no transform is needed).
     head_pose_from_xrWorld, head_pose_valid = safe_mat_update(CONST_HEAD_POSE, head_mat)
     ee_pose_from_xrWorld, ee_mat_valid = safe_mat_update(CONST_LEFT_ARM_POSE, ee_mat)
@@ -131,6 +133,4 @@ def Unitree2RobotForEEPose(ee_mat: np.ndarray, head_mat: np.ndarray) -> np.ndarr
     # The origin of the coordinate for IK Solve is near the WAIST joint motor. You can use teleop/robot_control/robot_arm_ik.py Unit_Test to check it.
     # The origin of the coordinate of IPunitree_Brobot_head_arm is HEAD.
     # So it is necessary to translate the origin of IPunitree_Brobot_head_arm from HEAD to WAIST.
-    ee_pose_from_head_pose_robotWorld[0, 3] += 0.15 # x
-    ee_pose_from_head_pose_robotWorld[2, 3] += 0.15 # z
     return ee_pose_from_head_pose_robotWorld

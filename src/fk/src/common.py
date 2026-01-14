@@ -1,4 +1,5 @@
 UNITREE_FK_TRANSFRAME = '/unitree/fk/tfs'
+FOURIER_FK_TRANSFRAME = '/fourier/fk/tfs'
 
 from google.protobuf.timestamp_pb2 import Timestamp
 

@@ -5,11 +5,11 @@ import numpy as np
 from rclpy.node import Node
 from std_msgs.msg import UInt8MultiArray
 
-from ik.src.common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC, Matrix2Pose
+from ik.src.common import FOURIER_IK_SOL_TOPIC, FOURIER_LOW_STATE_TOPIC
 
 from fk_processor_base import FKProcessor
-from .root_arm_fk import G1_29_ArmFK
-from common import UNITREE_FK_TRANSFRAME, TimeNs2GoogleTs
+from .root_arm_fk import Gr1T1_ArmFK
+from common import FOURIER_FK_TRANSFRAME, TimeNs2GoogleTs
 
 # proto
 from ik.ik_sol_pb2 import UnitTreeIkSol
@@ -18,33 +18,33 @@ from controller.state_pb2 import UnitTreeLowState
 from foxglove.FrameTransforms_pb2 import FrameTransforms
 from foxglove.FrameTransform_pb2 import FrameTransform
 
-class G129FKProcessor(FKProcessor):
+class Gr1T1FKProcessor(FKProcessor):
     def __init__(self, node: Node):
         super().__init__()
         self._node = node
         # low state
         self._subscription = node.create_subscription(
             UInt8MultiArray,
-            UNITREE_LOW_STATE_TOPIC,
+            FOURIER_LOW_STATE_TOPIC,
             self.lowStateCallback,
             10)
 
         # ik sol
         self._subscription1 = node.create_subscription(
             UInt8MultiArray,
-            UNITREE_IK_SOL_TOPIC,
+            FOURIER_IK_SOL_TOPIC,
             self.ikSolCallback,
             10)
 
         # ik solution publisher
-        self._publisher = node.create_publisher(UInt8MultiArray, UNITREE_FK_TRANSFRAME, 10)
+        self._publisher = node.create_publisher(UInt8MultiArray, FOURIER_FK_TRANSFRAME, 10)
 
         self._low_state = UnitTreeLowState()
         self._low_state_lock = threading.Lock()
         self._ik_sol = UnitTreeIkSol()
         self._ik_sol_lock = threading.Lock()
 
-        self._arm_fk = G1_29_ArmFK()
+        self._arm_fk = Gr1T1_ArmFK()
 
     def lowStateCallback(self, msg: UInt8MultiArray):
         try:

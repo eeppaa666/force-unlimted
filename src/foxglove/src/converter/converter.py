@@ -6,10 +6,14 @@ from .handlers import *
 
 FUNCITONS = {
     "/teleop/track_state": TeleopTrackState,
+    # unitree
     "/unitree/ik/sol": UnitreeIKsol,
     "/unitree/fk/tfs": UnitreeFKtfs,
     "/unitree/controller/low_state": UnitreeLowState,
     "/unitree/controller/head_frame": ImageFrame,
+    # fourier
+    "/fourier/ik/sol": UnitreeIKsol,
+    "/fourier/fk/tfs": UnitreeFKtfs,
 }
 
 class Converter:

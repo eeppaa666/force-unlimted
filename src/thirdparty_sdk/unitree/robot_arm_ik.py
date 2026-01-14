@@ -14,7 +14,6 @@ this_file = os.path.abspath(__file__)
 project_root = os.path.abspath(os.path.join(os.path.dirname(this_file), '../../'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-sys.path.insert(0, os.path.join(project_root, 'proto/generate'))
 
 from .weighted_moving_filter import WeightedMovingFilter
 
@@ -29,8 +28,8 @@ class G1_29_ArmIK:
         self.cache_path = "g1_29_model_cache.pkl"
 
         # if not self.Unit_Test:
-        self.urdf_path = os.path.join(project_root, '../assets/g1/g1_body29_hand14.urdf')
-        self.model_dir = os.path.join(project_root, '../assets/g1/')
+        self.urdf_path = os.path.join(project_root, '../assets/unitree/g1/g1_body29_hand14.urdf')
+        self.model_dir = os.path.join(project_root, '../assets/unitree/g1/')
         # else:
         #     self.urdf_path = '../../assets/g1/g1_body29_hand14.urdf'
         #     self.model_dir = '../../assets/g1/'

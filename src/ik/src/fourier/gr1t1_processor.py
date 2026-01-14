@@ -2,13 +2,15 @@ import threading
 import time
 import logging
 import numpy as np
+import pinocchio as pin
+
 from rclpy.node import Node
 from std_msgs.msg import UInt8MultiArray
 
-from thirdparty_sdk.unitree.robot_arm_ik import G1_29_ArmIK
+from thirdparty_sdk.fourier.robot_arm_ik_r1lite import Fourier_ArmIK
 
 from ik_processor_base import IKProcessor
-from common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC
+from common import FOURIER_IK_SOL_TOPIC, FOURIER_LOW_STATE_TOPIC
 from common import WebXR2RobotForEEPose, Pose2matrix
 
 # proto
@@ -17,11 +19,22 @@ from controller.state_pb2 import UnitTreeLowState
 from ik.ik_sol_pb2 import UnitTreeIkSol
 
 def PoseProcessEE(martrix: np.ndarray):
-    martrix[0, 3] += 0.15 # x
-    martrix[2, 3] += 0.15 # z
-    return martrix
+    # 1. 假设你已经得到了当前的位姿 (4x4 matrix)
+    # current_ee_pose 是你从 FK 或 Protobuf 转换出来的矩阵
+    T_old = pin.SE3(martrix)
 
-class G129IkProcessor(IKProcessor):
+    # 2. 定义绕 Y 轴旋转 90 度 (pi/2) 的旋转矩阵
+    # pin.utils.rotate(axis, angle)
+    R_y_90 = pin.utils.rotate('y', -np.pi/2)
+
+    # 3. 构造一个没有平移、只有旋转的 SE3 对象
+    T_rot = pin.SE3(R_y_90, np.zeros(3))
+
+    # 4. 右乘应用旋转 (绕局部坐标系旋转)
+    T_new = T_old.act(T_rot)  # 或者直接 T_old * T_rot
+    return T_new.homogeneous
+
+class Gr1T1Processor(IKProcessor):
     def __init__(self, node: Node):
         super().__init__()
         self._node = node
@@ -29,16 +42,17 @@ class G129IkProcessor(IKProcessor):
         # low state
         self._subscription = node.create_subscription(
             UInt8MultiArray,
-            UNITREE_LOW_STATE_TOPIC,
+            FOURIER_LOW_STATE_TOPIC,
             self.lowStateCallback,
             10)
 
         # ik solution publisher
-        self._publisher = node.create_publisher(UInt8MultiArray, UNITREE_IK_SOL_TOPIC, 10)
+        self._publisher = node.create_publisher(UInt8MultiArray, FOURIER_IK_SOL_TOPIC, 10)
 
         self._low_state = UnitTreeLowState()
         self._low_state_lock = threading.Lock()
-        self._arm_ik = G1_29_ArmIK()
+        self._arm_ik = Fourier_ArmIK()
+        self.dq_num = 14
 
     def lowStateCallback(self, msg: UInt8MultiArray):
         try:
@@ -54,8 +68,8 @@ class G129IkProcessor(IKProcessor):
         with self._low_state_lock:
             low_state_copy = UnitTreeLowState()
             low_state_copy.CopyFrom(self._low_state)
-        cur_dual_arm_q = np.array(low_state_copy.dual_arm_q) if len(low_state_copy.dual_arm_q) == 14 else None
-        cur_dual_arm_dq = np.array(low_state_copy.dual_arm_dq) if len(low_state_copy.dual_arm_dq) == 14 else None
+        cur_dual_arm_q = np.array(low_state_copy.dual_arm_q) if len(low_state_copy.dual_arm_q) == self.dq_num else None
+        cur_dual_arm_dq = np.array(low_state_copy.dual_arm_dq) if len(low_state_copy.dual_arm_dq) == self.dq_num else None
 
         if not tele_state.HasField("left_ee_pose") or \
             not tele_state.HasField("right_ee_pose") or \
@@ -68,10 +82,10 @@ class G129IkProcessor(IKProcessor):
         right_ee_mat = Pose2matrix(tele_state.right_ee_pose)
         left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat, Pose2matrix(tele_state.head_pose))
         right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat, Pose2matrix(tele_state.head_pose))
-        # postprocess
+
+
         left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot)
         right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot)
-
         # ik 求解
         sol_q, sol_tuaff = self._arm_ik.solve_ik(left_ee_mat_robot, right_ee_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)
 

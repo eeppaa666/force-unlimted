@@ -16,7 +16,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, 'proto/generate'))
 
-class G1_29_ArmFK:
+class Gr1T1_ArmFK:
     def __init__(self, Unit_Test = False, Visualization = False):
         np.set_printoptions(precision=5, suppress=True, linewidth=200)
 
@@ -24,56 +24,35 @@ class G1_29_ArmFK:
         self.Visualization = Visualization
 
         # fixed cache file path
-        self.cache_path = "g1_29_model_cache.pkl"
+        self.cache_path = "fourier_model_cache.pkl"
 
-        # if not self.Unit_Test:
-        self.urdf_path = os.path.join(project_root, '../assets/unitree/g1/g1_body29_hand14.urdf')
-        self.model_dir = os.path.join(project_root, '../assets/unitree/g1/')
-        # else:
-        #     self.urdf_path = '../../assets/g1/g1_body29_hand14.urdf'
-        #     self.model_dir = '../../assets/g1/'
+        self.urdf_path = os.path.join(project_root, '../assets/fourier/urdf/gr1t1_fourier_hand_6dof.urdf')
+        self.model_dir = os.path.join(project_root, '../assets/fourier/')
 
         # Try loading cache first
         if os.path.exists(self.cache_path) and (not self.Visualization):
-            logging.info(f"[G1_29_ArmFK] >>> Loading cached robot model: {self.cache_path}")
+            logging.info(f"[Fourier_ArmIK] >>> Loading cached robot model: {self.cache_path}")
             self.robot, self.reduced_robot = self.load_cache()
         else:
-            logging.info("[G1_29_ArmFK] >>> Loading URDF (slow)...")
+            logging.info("[Fourier_ArmIK] >>> Loading URDF (slow)...")
             self.robot = pin.RobotWrapper.BuildFromURDF(self.urdf_path, self.model_dir)
 
             self.mixed_jointsToLockIDs = [
-                                            "left_hip_pitch_joint" ,
-                                            "left_hip_roll_joint" ,
-                                            "left_hip_yaw_joint" ,
-                                            "left_knee_joint" ,
-                                            "left_ankle_pitch_joint" ,
-                                            "left_ankle_roll_joint" ,
-                                            "right_hip_pitch_joint" ,
-                                            "right_hip_roll_joint" ,
-                                            "right_hip_yaw_joint" ,
-                                            "right_knee_joint" ,
-                                            "right_ankle_pitch_joint" ,
-                                            "right_ankle_roll_joint" ,
-                                            "waist_yaw_joint" ,
-                                            "waist_roll_joint" ,
-                                            "waist_pitch_joint" ,
-
-                                            "left_hand_thumb_0_joint" ,
-                                            "left_hand_thumb_1_joint" ,
-                                            "left_hand_thumb_2_joint" ,
-                                            "left_hand_middle_0_joint" ,
-                                            "left_hand_middle_1_joint" ,
-                                            "left_hand_index_0_joint" ,
-                                            "left_hand_index_1_joint" ,
-
-                                            "right_hand_thumb_0_joint" ,
-                                            "right_hand_thumb_1_joint" ,
-                                            "right_hand_thumb_2_joint" ,
-                                            "right_hand_index_0_joint" ,
-                                            "right_hand_index_1_joint" ,
-                                            "right_hand_middle_0_joint",
-                                            "right_hand_middle_1_joint"
-                                        ]
+                "left_hip_roll_joint", "left_hip_yaw_joint", "left_hip_pitch_joint", "left_knee_pitch_joint", "left_ankle_pitch_joint", "left_ankle_roll_joint",
+                "right_hip_roll_joint", "right_hip_yaw_joint", "right_hip_pitch_joint", "right_knee_pitch_joint", "right_ankle_pitch_joint", "right_ankle_roll_joint",
+                "waist_yaw_joint", "waist_pitch_joint", "waist_roll_joint",
+                "head_yaw_joint", "head_roll_joint", "head_pitch_joint",
+                "L_thumb_proximal_yaw_joint", "L_thumb_proximal_pitch_joint", "L_thumb_distal_joint",
+                "L_index_proximal_joint", "L_index_intermediate_joint",
+                "L_middle_proximal_joint", "L_middle_intermediate_joint",
+                "L_ring_proximal_joint", "L_ring_intermediate_joint",
+                "L_pinky_proximal_joint", "L_pinky_intermediate_joint",
+                "R_thumb_proximal_yaw_joint", "R_thumb_proximal_pitch_joint", "R_thumb_distal_joint",
+                "R_index_proximal_joint", "R_index_intermediate_joint",
+                "R_middle_proximal_joint", "R_middle_intermediate_joint",
+                "R_ring_proximal_joint", "R_ring_intermediate_joint",
+                "R_pinky_proximal_joint", "R_pinky_intermediate_joint"
+            ]
 
             self.reduced_robot = self.robot.buildReducedRobot(
                 list_of_joints_to_lock=self.mixed_jointsToLockIDs,
@@ -82,32 +61,26 @@ class G1_29_ArmFK:
 
             self.reduced_robot.model.addFrame(
                 pin.Frame('L_ee',
-                          self.reduced_robot.model.getJointId('left_wrist_yaw_joint'),
-                          pin.SE3(np.eye(3),
-                                  np.array([0.05,0,0]).T),
-                          pin.FrameType.OP_FRAME)
+                        self.reduced_robot.model.getJointId('left_wrist_pitch_joint'),
+                        pin.SE3(np.eye(3),
+                                np.array([0,0,-0.05]).T),
+                        pin.FrameType.OP_FRAME)
             )
+
             self.reduced_robot.model.addFrame(
                 pin.Frame('R_ee',
-                          self.reduced_robot.model.getJointId('right_wrist_yaw_joint'),
-                          pin.SE3(np.eye(3),
-                                  np.array([0.05,0,0]).T),
-                          pin.FrameType.OP_FRAME)
+                        self.reduced_robot.model.getJointId('right_wrist_pitch_joint'),
+                        pin.SE3(np.eye(3),
+                                np.array([0,0,-0.05]).T),
+                        pin.FrameType.OP_FRAME)
             )
+
             # Save cache (only after everything is built)
             if not os.path.exists(self.cache_path):
                 self.save_cache()
                 logging.info(f">>> Cache saved to {self.cache_path}")
 
-        # for i in range(self.reduced_robot.model.nframes):
-        #     frame = self.reduced_robot.model.frames[i]
-        #     frame_id = self.reduced_robot.model.getFrameId(frame.name)
-        #     logging.debug(f"Frame ID: {frame_id}, Name: {frame.name}")
         self.data = self.reduced_robot.model.createData()
-
-        # Get the hand joint ID and define the error function
-        self.L_hand_id = self.reduced_robot.model.getFrameId("L_ee")
-        self.R_hand_id = self.reduced_robot.model.getFrameId("R_ee")
 
         # 获取详细的 q 向量布局
         model = self.reduced_robot.model

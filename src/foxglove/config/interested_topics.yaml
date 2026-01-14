@@ -1,6 +1,8 @@
 topics:
   - /teleop/track_state
-  - /unitree/ik/sol
   - /unitree/controller/low_state
   - /unitree/fk/tfs
+  - /unitree/ik/sol
   - /unitree/controller/head_frame
+  - /fourier/fk/tfs
+  - /fourier/ik/sol
