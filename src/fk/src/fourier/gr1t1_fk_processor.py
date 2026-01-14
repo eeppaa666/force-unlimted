@@ -83,12 +83,6 @@ class Gr1T1FKProcessor(FKProcessor):
         if tfs is None:
             return
         msg = FrameTransforms()
-        tf = FrameTransform()
-        tf.parent_frame_id = "world"
-        tf.child_frame_id = "robot"
-        # tf.translation.z = 0.7
-        # tf.translation.x = -0.1
-        msg.transforms.append(tf)
         for link_name, pose in tfs.items():
             translation = pose.translation  # numpy array [x, y, z]
             rotation = pose.rotation        # 3x3 rotation matrix

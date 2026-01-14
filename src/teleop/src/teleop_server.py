@@ -19,6 +19,7 @@ install_mp_handler()
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, UInt8MultiArray
+from foxglove.Pose_pb2 import Pose
 
 from teleop.src.utils import matrix_to_pose
 from teleop.src.televuer.televuer import TeleVuer
@@ -54,6 +55,8 @@ class TeleopPublisher(Node):
         image_time_priod = 1.0 / args.image_frequency
         self.image_timer = self.create_timer(image_time_priod, self._timer_image_callback)
         self.start_track = False
+        self.base_link = Pose()
+        self.prev_left_a_button = False
 
     def __del__(self):
         self.tv.close()
@@ -67,18 +70,27 @@ class TeleopPublisher(Node):
             # break
 
     def _timer_pub_callback(self):
-        if self.tv.left_ctrl_aButton == True and not self.start_track:
-            self.start_track = True
-            logging.info("start teleop track")
+        cur_left_a = self.tv.left_ctrl_aButton
+        if cur_left_a != self.prev_left_a_button:
+            if cur_left_a == True and not self.start_track:
+                self.start_track = True
+                logging.info("start teleop track")
+            elif cur_left_a == True and self.start_track:
+                self.start_track = False
+                logging.info("stop teleop track")
+            self.prev_left_a_button = cur_left_a
 
-        if self.tv.left_ctrl_bButton == True and self.start_track:
-            self.start_track = False
-            logging.info("stop teleop track")
-
-        if not self.start_track:
-            return
+        if self.tv.left_ctrl_bButton == True:
+            self.base_link = Pose()
 
         state = TeleState()
+        if not self.start_track:
+            state.start_track = False
+            self._move_base_link()
+        else:
+            state.start_track = True
+
+        state.base_link.CopyFrom(self.base_link)
         state.timestamp.seconds = time.time_ns() // 1_000_000_000
         state.timestamp.nanos = time.time_ns() % 1_000_000_000
         # right arm
@@ -122,7 +134,25 @@ class TeleopPublisher(Node):
         # 注意：Python 的 bytes 需要转换成 list(int) 供 ROS 2 使用
         ros_msg.data = list(binary_data)
         self._publisher.publish(ros_msg)
-        # self.get_logger().debug('Publishing: "%s"' % ros_msg.data)
+
+    def _move_base_link(self):
+        step = 0.05
+        # -----> X
+        # |
+        # |
+        # Y
+        # 控制robot base_link系 左右前后
+        right_xy = self.tv.right_ctrl_thumbstickValue
+        # 控制robot base_link系 上下
+        left_xy = self.tv.left_ctrl_thumbstickValue
+
+        if left_xy[0] != 0:
+            self.base_link.position.y -= step * left_xy[0]
+        if left_xy[1] != 0:
+            self.base_link.position.x -= step * left_xy[1]
+        if right_xy[1] != 0:
+            self.base_link.position.z -= step * right_xy[1]
+
 
 def main():
     parser = argparse.ArgumentParser()

@@ -19,7 +19,7 @@ from controller.state_pb2 import UnitTreeLowState
 from ik.ik_sol_pb2 import UnitTreeIkSol
 
 def PoseProcessEE(martrix: np.ndarray, head_matrix):
-    martrix[0:3, 3] = martrix[0:3, 3] - head_matrix[0:3, 3]
+    # martrix[0:3, 3] = martrix[0:3, 3] - head_matrix[0:3, 3]
     # 1. 假设你已经得到了当前的位姿 (4x4 matrix)
     # current_ee_pose 是你从 FK 或 Protobuf 转换出来的矩阵
     T_old = pin.SE3(martrix)

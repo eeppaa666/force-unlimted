@@ -51,6 +51,8 @@ class FkNode(Node):
 
     def fkProcessCallback(self):
         with self._state_lock:
+            if not self._state.start_track:
+                return
             if self._state_flush_cnt <= 0:
                 return
             if self._state_prev_cnt == self._state_flush_cnt:

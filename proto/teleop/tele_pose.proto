@@ -60,5 +60,10 @@ message TeleState {
     foxglove.Pose head_pose = 19;
 
     google.protobuf.Timestamp timestamp = 20;
+
+    // base_link pose from robot coordinate
+    foxglove.Pose base_link = 21;
+    bool start_track = 22;
+
     // TODO: hand pose
 }
