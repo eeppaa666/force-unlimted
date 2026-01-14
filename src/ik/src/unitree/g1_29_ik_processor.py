@@ -9,14 +9,33 @@ from thirdparty_sdk.unitree.robot_arm_ik import G1_29_ArmIK
 
 from ik_processor_base import IKProcessor
 from common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC
-from common import WebXR2RobotForEEPose, Pose2matrix
+from common import *
 
 # proto
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
 from ik.ik_sol_pb2 import UnitTreeIkSol
 
-def PoseProcessEE(martrix: np.ndarray):
+CONST_HEAD_POSE = np.array([[1, 0, 0, 0],
+                            [0, 1, 0, 1.5],
+                            [0, 0, 1, -0.2],
+                            [0, 0, 0, 1]])
+
+# For Robot initial position
+CONST_RIGHT_ARM_POSE = np.array([[1, 0, 0, 0.15],
+                                 [0, 1, 0, 1.13],
+                                 [0, 0, 1, -0.3],
+                                 [0, 0, 0, 1]])
+
+CONST_LEFT_ARM_POSE = np.array([[1, 0, 0, -0.15],
+                                [0, 1, 0, 1.13],
+                                [0, 0, 1, -0.3],
+                                [0, 0, 0, 1]])
+
+CONST_HAND_ROT = np.tile(np.eye(3)[None, :, :], (25, 1, 1))
+
+def PoseProcessEE(martrix: np.ndarray, head_matrix: np.ndarray):
+    martrix[0:3, 3] = martrix[0:3, 3] - head_matrix[0:3, 3]
     martrix[0, 3] += 0.15 # x
     martrix[2, 3] += 0.15 # z
     return martrix
@@ -64,13 +83,17 @@ class G129IkProcessor(IKProcessor):
             return
 
         # 将xr 坐标系转换为 robot坐标系
-        left_ee_mat = Pose2matrix(tele_state.left_ee_pose)
-        right_ee_mat = Pose2matrix(tele_state.right_ee_pose)
-        left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat, Pose2matrix(tele_state.head_pose))
-        right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat, Pose2matrix(tele_state.head_pose))
+        left_ee_mat, _ = safe_mat_update(CONST_LEFT_ARM_POSE, Pose2matrix(tele_state.left_ee_pose))
+        right_ee_mat, _ = safe_mat_update(CONST_RIGHT_ARM_POSE ,Pose2matrix(tele_state.right_ee_pose))
+        head_ee_mat, _ = safe_mat_update(CONST_HEAD_POSE, Pose2matrix(tele_state.head_pose))
+
+        left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat)
+        right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat)
+        head_ee_mat_robot = WebXR2RobotForEEPose(head_ee_mat)
+
         # postprocess
-        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot)
-        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot)
+        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, head_ee_mat_robot)
+        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot, head_ee_mat_robot)
 
         # ik 求解
         sol_q, sol_tuaff = self._arm_ik.solve_ik(left_ee_mat_robot, right_ee_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)

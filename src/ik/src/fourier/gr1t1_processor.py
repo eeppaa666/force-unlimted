@@ -18,7 +18,8 @@ from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
 from ik.ik_sol_pb2 import UnitTreeIkSol
 
-def PoseProcessEE(martrix: np.ndarray):
+def PoseProcessEE(martrix: np.ndarray, head_matrix):
+    martrix[0:3, 3] = martrix[0:3, 3] - head_matrix[0:3, 3]
     # 1. 假设你已经得到了当前的位姿 (4x4 matrix)
     # current_ee_pose 是你从 FK 或 Protobuf 转换出来的矩阵
     T_old = pin.SE3(martrix)
@@ -80,12 +81,14 @@ class Gr1T1Processor(IKProcessor):
         # 将xr 坐标系转换为 robot坐标系
         left_ee_mat = Pose2matrix(tele_state.left_ee_pose)
         right_ee_mat = Pose2matrix(tele_state.right_ee_pose)
-        left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat, Pose2matrix(tele_state.head_pose))
-        right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat, Pose2matrix(tele_state.head_pose))
+        head_ee_mat = Pose2matrix(tele_state.head_pose)
 
+        left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat)
+        right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat)
+        head_ee_mat_robot = WebXR2RobotForEEPose(head_ee_mat)
 
-        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot)
-        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot)
+        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, head_ee_mat_robot)
+        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot, head_ee_mat_robot)
         # ik 求解
         sol_q, sol_tuaff = self._arm_ik.solve_ik(left_ee_mat_robot, right_ee_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)
 

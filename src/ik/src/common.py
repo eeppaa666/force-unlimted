@@ -66,24 +66,6 @@ R_OPENXR_ROBOT = np.array([[ 0,-1, 0],
                            [ 0, 0, 1],
                            [-1, 0, 0]])
 
-CONST_HEAD_POSE = np.array([[1, 0, 0, 0],
-                            [0, 1, 0, 1.5],
-                            [0, 0, 1, -0.2],
-                            [0, 0, 0, 1]])
-
-# For Robot initial position
-CONST_RIGHT_ARM_POSE = np.array([[1, 0, 0, 0.15],
-                                 [0, 1, 0, 1.13],
-                                 [0, 0, 1, -0.3],
-                                 [0, 0, 0, 1]])
-
-CONST_LEFT_ARM_POSE = np.array([[1, 0, 0, -0.15],
-                                [0, 1, 0, 1.13],
-                                [0, 0, 1, -0.3],
-                                [0, 0, 0, 1]])
-
-CONST_HAND_ROT = np.tile(np.eye(3)[None, :, :], (25, 1, 1))
-
 
 def Matrix2Pose(matrix: np.ndarray) -> Pose:
     if matrix.shape != (4, 4) or np.all(matrix[:3, :3] == 0):
@@ -118,19 +100,30 @@ def Pose2matrix(pose: Pose) -> np.ndarray:
     matrix[:3, :3] = rotation_matrix
     return matrix
 
-def WebXR2RobotForEEPose(ee_mat: np.ndarray, head_mat: np.ndarray) -> np.ndarray:
-    # Controller pose data directly follows the (initial pose) Unitree Humanoid Arm URDF Convention (thus no transform is needed).
-    head_pose_from_xrWorld, head_pose_valid = safe_mat_update(CONST_HEAD_POSE, head_mat)
-    ee_pose_from_xrWorld, ee_mat_valid = safe_mat_update(CONST_LEFT_ARM_POSE, ee_mat)
+# def WebXR2RobotForEEPose(ee_mat: np.ndarray, head_mat: np.ndarray) -> np.ndarray:
+#     # Controller pose data directly follows the (initial pose) Unitree Humanoid Arm URDF Convention (thus no transform is needed).
+#     head_pose_from_xrWorld, head_pose_valid = safe_mat_update(CONST_HEAD_POSE, head_mat)
+#     ee_pose_from_xrWorld, ee_mat_valid = safe_mat_update(CONST_LEFT_ARM_POSE, ee_mat)
+#     # Change basis convention
+#     head_pose_from_robotWorld = T_ROBOT_OPENXR @ head_pose_from_xrWorld @ T_OPENXR_ROBOT
+#     ee_pose_from_robotWorld = T_ROBOT_OPENXR @ ee_pose_from_xrWorld @ T_OPENXR_ROBOT
+#     # Transfer from WORLD to HEAD coordinate (translation adjustment only)
+#     ee_pose_from_head_pose_robotWorld = np.eye(4)
+#     ee_pose_from_head_pose_robotWorld[0:3, 3] = ee_pose_from_robotWorld[0:3, 3] - head_pose_from_robotWorld[0:3, 3]
+#     ee_pose_from_head_pose_robotWorld[0:3, 0:3] = ee_pose_from_robotWorld[0:3, 0:3]
+#     # =====coordinate origin offset=====
+#     # The origin of the coordinate for IK Solve is near the WAIST joint motor. You can use teleop/robot_control/robot_arm_ik.py Unit_Test to check it.
+#     # The origin of the coordinate of IPunitree_Brobot_head_arm is HEAD.
+#     # So it is necessary to translate the origin of IPunitree_Brobot_head_arm from HEAD to WAIST.
+#     ee_pose_from_head_pose_robotWorld[0, 3] += 0.15 # x
+#     ee_pose_from_head_pose_robotWorld[2, 3] += 0.15 # z
+#     return ee_pose_from_head_pose_robotWorld
+
+def WebXR2RobotForEEPose(ee_mat: np.ndarray) -> np.ndarray:
     # Change basis convention
-    head_pose_from_robotWorld = T_ROBOT_OPENXR @ head_pose_from_xrWorld @ T_OPENXR_ROBOT
-    ee_pose_from_robotWorld = T_ROBOT_OPENXR @ ee_pose_from_xrWorld @ T_OPENXR_ROBOT
+    ee_pose_from_robotWorld = T_ROBOT_OPENXR @ ee_mat @ T_OPENXR_ROBOT
     # Transfer from WORLD to HEAD coordinate (translation adjustment only)
     ee_pose_from_head_pose_robotWorld = np.eye(4)
-    ee_pose_from_head_pose_robotWorld[0:3, 3] = ee_pose_from_robotWorld[0:3, 3] - head_pose_from_robotWorld[0:3, 3]
+    ee_pose_from_head_pose_robotWorld[0:3, 3] = ee_pose_from_robotWorld[0:3, 3]
     ee_pose_from_head_pose_robotWorld[0:3, 0:3] = ee_pose_from_robotWorld[0:3, 0:3]
-    # =====coordinate origin offset=====
-    # The origin of the coordinate for IK Solve is near the WAIST joint motor. You can use teleop/robot_control/robot_arm_ik.py Unit_Test to check it.
-    # The origin of the coordinate of IPunitree_Brobot_head_arm is HEAD.
-    # So it is necessary to translate the origin of IPunitree_Brobot_head_arm from HEAD to WAIST.
     return ee_pose_from_head_pose_robotWorld
