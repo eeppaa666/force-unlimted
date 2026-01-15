@@ -94,7 +94,7 @@ class Gr1T1FKProcessor(FKProcessor):
             quat = R.from_matrix(rotation).as_quat()
             msg.transforms.append(
                 FrameTransform(
-                    parent_frame_id="robot",
+                    parent_frame_id="base_link",
                     child_frame_id=link_name,
                     timestamp=TimeNs2GoogleTs(time.time_ns()),
                     translation=Vector3(x=translation[0], y=translation[1], z=translation[2]),

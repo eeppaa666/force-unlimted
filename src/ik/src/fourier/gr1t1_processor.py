@@ -18,11 +18,12 @@ from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
 from ik.ik_sol_pb2 import UnitTreeIkSol
 
-def PoseProcessEE(martrix: np.ndarray, head_matrix):
-    # martrix[0:3, 3] = martrix[0:3, 3] - head_matrix[0:3, 3]
+def PoseProcessEE(ee_mat: np.ndarray, base_mat: np.ndarray, head_mat: np.ndarray):
+    ee_mat[0:3, 3] = ee_mat[0:3, 3] - base_mat[0:3, 3]
+
     # 1. 假设你已经得到了当前的位姿 (4x4 matrix)
     # current_ee_pose 是你从 FK 或 Protobuf 转换出来的矩阵
-    T_old = pin.SE3(martrix)
+    T_old = pin.SE3(ee_mat)
 
     # 2. 定义绕 Y 轴旋转 90 度 (pi/2) 的旋转矩阵
     # pin.utils.rotate(axis, angle)
@@ -33,7 +34,12 @@ def PoseProcessEE(martrix: np.ndarray, head_matrix):
 
     # 4. 右乘应用旋转 (绕局部坐标系旋转)
     T_new = T_old.act(T_rot)  # 或者直接 T_old * T_rot
-    return T_new.homogeneous
+    ee_mat = T_new.homogeneous
+
+    trans = np.eye(4)
+    trans[0:3, 3] = [0, 0, 0.15]
+    ee_mat = ee_mat @ trans
+    return ee_mat
 
 class Gr1T1Processor(IKProcessor):
     def __init__(self, node: Node):
@@ -82,13 +88,14 @@ class Gr1T1Processor(IKProcessor):
         left_ee_mat = Pose2matrix(tele_state.left_ee_pose)
         right_ee_mat = Pose2matrix(tele_state.right_ee_pose)
         head_ee_mat = Pose2matrix(tele_state.head_pose)
+        base_link_robot = Pose2matrix(tele_state.base_link)
 
         left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat)
         right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat)
         head_ee_mat_robot = WebXR2RobotForEEPose(head_ee_mat)
 
-        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, head_ee_mat_robot)
-        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot, head_ee_mat_robot)
+        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, base_link_robot, head_ee_mat_robot)
+        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot, base_link_robot, head_ee_mat_robot)
         # ik 求解
         sol_q, sol_tuaff = self._arm_ik.solve_ik(left_ee_mat_robot, right_ee_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)
 

@@ -20,6 +20,8 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, UInt8MultiArray
 from foxglove.Pose_pb2 import Pose
+from foxglove.Quaternion_pb2 import Quaternion
+from foxglove.Vector3_pb2 import Vector3
 
 from teleop.src.utils import matrix_to_pose
 from teleop.src.televuer.televuer import TeleVuer
@@ -55,7 +57,7 @@ class TeleopPublisher(Node):
         image_time_priod = 1.0 / args.image_frequency
         self.image_timer = self.create_timer(image_time_priod, self._timer_image_callback)
         self.start_track = False
-        self.base_link = Pose()
+        self.base_link = Pose(position=Vector3(x=0, y=0, z=0), orientation=Quaternion(x=0, y=0, z=0, w=1))
         self.prev_left_a_button = False
 
     def __del__(self):
@@ -80,13 +82,14 @@ class TeleopPublisher(Node):
                 logging.info("stop teleop track")
             self.prev_left_a_button = cur_left_a
 
-        if self.tv.left_ctrl_bButton == True:
-            self.base_link = Pose()
 
         state = TeleState()
         if not self.start_track:
-            state.start_track = False
+            # reset base link pose
+            if self.tv.left_ctrl_bButton == True:
+                self.base_link = Pose(position=Vector3(x=0, y=0, z=0), orientation=Quaternion(x=0, y=0, z=0, w=1))
             self._move_base_link()
+            state.start_track = False
         else:
             state.start_track = True
 
@@ -136,6 +139,11 @@ class TeleopPublisher(Node):
         self._publisher.publish(ros_msg)
 
     def _move_base_link(self):
+        import numpy as np
+        T_ROBOT_OPENXR = np.array([[ 0, 0,-1, 0],
+                           [-1, 0, 0, 0],
+                           [ 0, 1, 0, 0],
+                           [ 0, 0, 0, 1]])
         step = 0.05
         # -----> X
         # |
@@ -145,11 +153,15 @@ class TeleopPublisher(Node):
         right_xy = self.tv.right_ctrl_thumbstickValue
         # 控制robot base_link系 上下
         left_xy = self.tv.left_ctrl_thumbstickValue
+        head_mat = self.tv.head_pose
+        head_mat = T_ROBOT_OPENXR @ head_mat
+        # if left_xy[0] != 0:
+        #     self.base_link.position.y -= step * left_xy[0]
+        # if left_xy[1] != 0:
+        #     self.base_link.position.x -= step * left_xy[1]
+        self.base_link.position.x = head_mat[0, 3]
+        self.base_link.position.y = head_mat[1, 3]
 
-        if left_xy[0] != 0:
-            self.base_link.position.y -= step * left_xy[0]
-        if left_xy[1] != 0:
-            self.base_link.position.x -= step * left_xy[1]
         if right_xy[1] != 0:
             self.base_link.position.z -= step * right_xy[1]
 

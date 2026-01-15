@@ -56,6 +56,14 @@ def TeleopTrackState(inmsg: InMessage, callback: Callable[[OutMessage], None]):
             timestamp=TimeNs2GoogleTs(inmsg.timestamp_ns),
             parent_frame_id="world",
             child_frame_id="robot",
+        )
+    )
+
+    out.data.transforms.append(
+        FrameTransform(
+            timestamp=TimeNs2GoogleTs(inmsg.timestamp_ns),
+            parent_frame_id="robot",
+            child_frame_id="base_link",
             translation = msg.base_link.position,
             rotation= msg.base_link.orientation
         )
@@ -90,7 +98,7 @@ def UnitreeIKsol(inmsg: InMessage, callback: Callable[[OutMessage], None]):
     tfs.transforms.append(
         FrameTransform(
             timestamp=TimeNs2GoogleTs(inmsg.timestamp_ns),
-            parent_frame_id="robot",
+            parent_frame_id="base_link",
             child_frame_id="left_ee_sol",
             translation=left_pose.position,
             rotation=left_pose.orientation
@@ -101,7 +109,7 @@ def UnitreeIKsol(inmsg: InMessage, callback: Callable[[OutMessage], None]):
     tfs.transforms.append(
         FrameTransform(
             timestamp=TimeNs2GoogleTs(inmsg.timestamp_ns),
-            parent_frame_id="robot",
+            parent_frame_id="base_link",
             child_frame_id="reft_ee_sol",
             translation=right_pose.position,
             rotation=right_pose.orientation
