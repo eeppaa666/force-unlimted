@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package controller;
+
+// 原生关节和位姿数据
+message Native {
+    repeated double head_mat = 1;
+    repeated double left_wrist_mat = 2;
+    repeated double right_wrist_mat = 3;
+    repeated double left_qpos = 4;
+    repeated double right_qpos = 5;
+    repeated double q_real = 6;
+}
+
+// IK 求解结果
+message Solve {
+    repeated double velocity = 1;
+    repeated double dt = 2;
+    repeated double q_real = 3;
+}
+
+// 滤波后关节信息
+message Filter {
+    repeated double filter_qpos = 1;
+    repeated double q_real = 2;
+}
+
+// 整体四元数遥操作数据
+message FourierTeleoperation {
+    google.protobuf.Timestamp timestamp = 1;
+    repeated Native native_pos = 2;
+    repeated Solve solve_pos = 3;
+    repeated Filter filter_pos = 4;
+}

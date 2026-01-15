@@ -14,6 +14,8 @@ FUNCITONS = {
     # fourier
     "/fourier/ik/sol": UnitreeIKsol,
     "/fourier/fk/tfs": UnitreeFKtfs,
+    "/fourier/teleoperation/debug_visiable" : FourierDebugVisiable,
+    "/fourier/controller/debug_visiable"    : FourierDebugVisiable,
 }
 
 class Converter:

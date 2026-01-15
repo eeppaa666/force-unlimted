@@ -12,5 +12,8 @@ python3 src/ik/src/fk_node.py --frequency=60
 # 启动controller
 python3 src/controller/src/unitree_g1_29_controller.py --unitree_dds_fps 60 --ros_msg_fps 60  --open_img_pub True --image_fps 10 --img_server_ip 10.106.1.95
 
+# 启动 fourier controller
+python3 src/controller/src/fourier_gr1_t1_controller.py
+
 # 启动 foxglove 可视化
 python3 src/foxglove/src/server.py

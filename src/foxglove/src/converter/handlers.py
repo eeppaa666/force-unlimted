@@ -193,3 +193,12 @@ def ImageFrame(inmsg: InMessage, callback: Callable[[OutMessage], None]):
     # out_raw.data = inmsg.data
     # out_raw.type = ImageFrame()
     # callback(out_raw)
+
+def FourierDebugVisiable(inmsg: InMessage, callback: Callable[[OutMessage], None]):
+    from controller.teleoperation_pb2 import FourierTeleoperation
+    out = OutMessage()
+    out.channel = inmsg.topic
+    out.timestamp_ns = inmsg.timestamp_ns
+    out.data = inmsg.data
+    out.type = FourierTeleoperation()
+    callback(out)

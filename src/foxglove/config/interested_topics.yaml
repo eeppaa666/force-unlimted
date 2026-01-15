@@ -6,3 +6,5 @@ topics:
   - /unitree/controller/head_frame
   - /fourier/fk/tfs
   - /fourier/ik/sol
+  - /fourier/teleoperation/debug_visiable
+  - /fourier/controller/debug_visiable

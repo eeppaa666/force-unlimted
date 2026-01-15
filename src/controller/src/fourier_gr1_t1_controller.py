@@ -27,6 +27,7 @@ from controller.state_pb2 import UnitTreeLowState
 from ik.ik_sol_pb2 import UnitTreeIkSol
 from teleop.tele_pose_pb2 import TeleState
 from image.image_pb2 import ImageFrame
+from controller.teleoperation_pb2 import FourierTeleoperation
 
 # =========================
 # 多进程日志与 ROS2
@@ -61,6 +62,7 @@ TRACK_STATE_TOPIC       = '/teleop/track_state' # 遥操作/状态机控制信�
 # pub topic
 FOURIER_LOW_STATE_TOPIC = "/fourier/controller/low_state"  # 机器人双臂当前状态
 FOURIER_HEAD_FRAME      = "/fourier/controller/head_frame"
+FOURIER_DEBUG_VISIABLE  = "/fourier/controller/debug_visiable"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -239,23 +241,40 @@ class FourierGR1T1Controller(ControllerInterface):
 
         if topic_name is FOURIER_IK_SOL_TOPIC:
             state = UnitTreeIkSol()
+            debug_visiable_state = FourierTeleoperation()
             try:
                 binary_data = bytes(msg.data)
                 state.ParseFromString(binary_data)
                 dual_q = np.array(state.dual_arm_sol_q, dtype=np.float64, copy=True)
                 q_cur  = np.array(self._fourier_dex_reboot.q_real, dtype=np.float64, copy=True)
                 q_cmd = self.buildQCmd(dual_q, q_cur)
+                
+                # debug visiable
+                native = debug_visiable_state.native_pos.add()
+                native.q_real.extend(self._fourier_dex_reboot.q_real.flatten().tolist())
+                
                 self._fourier_dex_reboot.q_real = q_cmd
-                self.control_joints()
+
+                # debug visiable
+                solve = debug_visiable_state.solve_pos.add()
+                solve.q_real.extend(self._fourier_dex_reboot.q_real.flatten().tolist())
+                qpos = self.control_joints()
+
+                filter = debug_visiable_state.filter_pos.add()
+                filter.filter_qpos.extend(qpos.flatten().tolist())
+                filter.q_real.extend(self._fourier_dex_reboot.q_real.flatten().tolist())
+
                 if self._msg_count % 100 > 95:
                     logging.info(f"Get {FOURIER_IK_SOL_TOPIC} msg")
-                # ts = state.timestamp
-                # ik_ms = ts.seconds * 1000000000 + ts.nanos
-                # now_ms = time.time_ns()
-                # delay_ms = now_ms - ik_ms
-                # logging.info(f"Get {FOURIER_IK_SOL_TOPIC} msg, {ik_ms} ms, {delay_ms / 1000000} ms")
-                # self._ik_sol.CopyFrom(state)
-                # self.__unitreeMsgPub()
+
+                timestamp = time.time_ns()
+                self._low_state.timestamp.seconds = timestamp // 1_000_000_000
+                self._low_state.timestamp.nanos = timestamp % 1_000_000_000
+                binary_data = debug_visiable_state.SerializeToString()
+                msg = UInt8MultiArray()
+                msg.data = list(binary_data)
+                self._publisher_control[FOURIER_DEBUG_VISIABLE].publish(msg)
+                # logging.info(f"pub {FOURIER_DEBUG_VISIABLE} msg")
             except Exception as e:
                 logging.error(f'ParseFromString Protobuf failed: {e}')
 
@@ -412,7 +431,7 @@ def ExtraContrilerArgs(parser):
     parser.add_argument("--config_name", type=str, default="teleop_gr1_t1_sim", help="Hydra config name")
 
     parser.set_defaults(rate_hz=30)
-    parser.set_defaults(pub_topic_list=[FOURIER_LOW_STATE_TOPIC, FOURIER_HEAD_FRAME])
+    parser.set_defaults(pub_topic_list=[FOURIER_LOW_STATE_TOPIC, FOURIER_HEAD_FRAME, FOURIER_DEBUG_VISIABLE])
     parser.set_defaults(sub_topic_list=[FOURIER_IK_SOL_TOPIC, TRACK_STATE_TOPIC])
     parser.set_defaults(config_path=os.path.abspath(os.path.join(project_root, "controller/src/fourier/configs")))
 
