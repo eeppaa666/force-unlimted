@@ -161,6 +161,27 @@ class G1_29_ArmFK:
             logging.error(f"Frame {link_name} not found in model.")
             return None
 
+    def get_init_tfs(self):
+        # 1. 获取 neutral 状态的 q (通常是全 0，对于浮动基座机器人，位姿部分为单位阵)
+        q_neutral = pin.neutral(self.reduced_robot.model)
+
+        # 2. 计算一次初始状态的 FK
+        # 注意：这里使用 self.data，它会更新 self.data.oMf 数组
+        pin.framesForwardKinematics(self.reduced_robot.model, self.data, q_neutral)
+
+        frames_transforms = {}
+        for i in range(self.reduced_robot.model.nframes):
+            frame = self.reduced_robot.model.frames[i]
+            frame_name = frame.name
+
+            # oMf (Object-to-Frame) 是相对于世界坐标系的位姿 SE3
+            # .homogeneous() 返回 4x4 numpy 矩阵
+            # frames_transforms[frame_name] = self.data.oMf[i].homogeneous
+            frames_transforms[frame_name] = self.data.oMf[i]
+            # frames_transforms[frame_name] = self.reduced_robot.data.oMf[i]
+
+        return frames_transforms
+
     def compute_all_fk(self, q):
         """
         根据给定的关节角 q 计算所有 Frame (Link) 的位姿

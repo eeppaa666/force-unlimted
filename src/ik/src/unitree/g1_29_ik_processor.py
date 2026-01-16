@@ -34,10 +34,13 @@ CONST_LEFT_ARM_POSE = np.array([[1, 0, 0, -0.15],
 
 CONST_HAND_ROT = np.tile(np.eye(3)[None, :, :], (25, 1, 1))
 
-def PoseProcessEE(martrix: np.ndarray, head_matrix: np.ndarray):
-    martrix[0:3, 3] = martrix[0:3, 3] - head_matrix[0:3, 3]
-    martrix[0, 3] += 0.15 # x
-    martrix[2, 3] += 0.15 # z
+def PoseProcessEE(martrix: np.ndarray, base_link: np.ndarray):
+    martrix[0:3, 3] = martrix[0:3, 3] - base_link[0:3, 3]
+    # # martrix[0, 3] += 0.15 # x
+    # # martrix[2, 3] += 0.15 # z
+    trans = np.eye(4)
+    trans[0:3, 3] = [-0.15, 0, 0]
+    martrix = martrix @ trans
     return martrix
 
 class G129IkProcessor(IKProcessor):
@@ -90,10 +93,11 @@ class G129IkProcessor(IKProcessor):
         left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat)
         right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat)
         head_ee_mat_robot = WebXR2RobotForEEPose(head_ee_mat)
+        base_link_robot = Pose2matrix(tele_state.base_link)
 
         # postprocess
-        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, head_ee_mat_robot)
-        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot, head_ee_mat_robot)
+        left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, base_link_robot)
+        right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot, base_link_robot)
 
         # ik 求解
         sol_q, sol_tuaff = self._arm_ik.solve_ik(left_ee_mat_robot, right_ee_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)

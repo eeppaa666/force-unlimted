@@ -9,20 +9,29 @@ from google.protobuf.message import Message
 from .processor_base import FoxgloveProcessor
 from .message import OutMessage
 from .utils import collect_schema_with_deps
+from .async_loop import AsyncManager
 
 class WebsocketProcessor(FoxgloveProcessor, FoxgloveServerListener):
     """WebSocket数据处理类"""
     def Init(self, args):
-        self._server = FoxgloveServer(args.ip, args.port, "Foxglove WebSocket Server")
-        self._server.set_listener(self)
+        self._async_manager = AsyncManager()
 
-        self._server.start()
+        self._async_manager.runAsync(self.runServer(args))
+
         self._channels = dict()
         self._channel_ids = dict()
+        self._async_manager.start()
+
         logging.info(f"websocket processor start {args.ip} {args.port}")
 
     def Process(self, msg: OutMessage):
-        asyncio.create_task(self.process(msg))
+        # asyncio.create_task(self.process(msg))
+        self._async_manager.runAsync(self.process(msg))
+
+    async def runServer(self, args):
+        self._server = FoxgloveServer(args.ip, args.port, "Foxglove WebSocket Server")
+        self._server.set_listener(self)
+        self._server.start()
 
     async def process(self, msg: OutMessage):
         if msg.channel not in self._channels:
@@ -55,26 +64,3 @@ class WebsocketProcessor(FoxgloveProcessor, FoxgloveServerListener):
     def on_unsubscribe(self, server, channel_id):
         logging.info(f"websocket on unsub {self._channel_ids[channel_id]} {channel_id}")
         return super().on_unsubscribe(server, channel_id)
-# async def main():
-#     parse = argparse.ArgumentParser()
-#     args = parse.parse_args()
-#     async with FoxgloveServer("0.0.0.0", 8765, "example server") as server:
-#         # # Publish the grid message
-#         fds = collect_schema_with_deps(Grid.DESCRIPTOR.file)
-#         id = await server.add_channel({
-#             "topic": "grid",
-#             "encoding": "protobuf",
-#             "schemaName": "foxglove.Grid",
-#             "schema": base64.b64encode(fds.SerializeToString()).decode("utf-8"),
-#         })
-#         # print(fds.SerializeToString())
-#         while True:
-#             # 发送消息
-#             await server.send_message(id, time.time_ns(), Grid().SerializeToString())
-#             # print(grid.SerializeToString())
-#             print("sending")
-#             # 等待 1 秒
-#             await asyncio.sleep(1)
-
-#         # 永久挂起，保持服务器运行
-#         await asyncio.Future()

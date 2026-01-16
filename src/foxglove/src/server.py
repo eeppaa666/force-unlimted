@@ -48,6 +48,7 @@ class FoxgloveNode(Node):
             raise ValueError(f"Failed to load interested topics config {e}")
 
         self._async_manager = AsyncManager()
+        self._async_manager.start()
 
         self._subs = []
         for topic in config['topics']:
@@ -78,7 +79,7 @@ class FoxgloveNode(Node):
         return callback
 
 
-async def main():
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--interested_topics', type=str, default=os.path.join(project_root, 'foxglove/config/interested_topics.yaml'), help='Path to the configuration file')
     parser.add_argument('--mode', type=str, default='live', help='run mode: repaly / live')
@@ -96,14 +97,14 @@ async def main():
     try:
         rclpy.init(args=other_args)
         node = FoxgloveNode(args)
-        while rclpy.ok():
-            # 驱动一次 ROS2 任务处理
-            # timeout_sec=0 表示立即返回，不阻塞 asyncio 循环
-            rclpy.spin_once(node, timeout_sec=0)
+        # while rclpy.ok():
+        #     # 驱动一次 ROS2 任务处理
+        #     # timeout_sec=0 表示立即返回，不阻塞 asyncio 循环
+        #     rclpy.spin_once(node, timeout_sec=0)
 
-            # 交还控制权给 asyncio，让 Foxglove Server 有机会运行
-            await asyncio.sleep(0.01)
-        # rclpy.spin(node)
+        #     # 交还控制权给 asyncio，让 Foxglove Server 有机会运行
+        #     await asyncio.sleep(0.01)
+        rclpy.spin(node)
         rclpy.shutdown()
     except KeyboardInterrupt:
         pass
@@ -112,4 +113,4 @@ async def main():
         node.destroy_node()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

@@ -7,9 +7,10 @@ python3 src/teleop/test/test_teleop_sub.py
 python3 src/ik/src/ik_node.py --frequency=60
 
 # 启动fk
-python3 src/ik/src/fk_node.py --frequency=60
+python3 src/fk/src/fk_node.py --frequency=60
 
 # 启动controller
+export CYCLONEDDS_HOME=/root/code/cyclonedds-0.10.2/cyclonedds_install
 python3 src/controller/src/unitree_g1_29_controller.py --unitree_dds_fps 60 --ros_msg_fps 60  --open_img_pub True --image_fps 10 --img_server_ip 10.106.1.95
 
 # 启动 fourier controller

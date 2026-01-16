@@ -25,6 +25,9 @@ class AsyncManager:
             fn()
         future = asyncio.run_coroutine_threadsafe(FnWrapper(fn), self.loop)
 
+    def runAsync(self, fn):
+        future = asyncio.run_coroutine_threadsafe(fn, self.loop)
+
     def start(self):
         # 启动线程
         self.thread.start()
