@@ -4,3 +4,4 @@ assets
 proto/generate
 **/*.pkl
 tmp
+*.mcap

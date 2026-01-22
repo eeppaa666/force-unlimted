@@ -10,7 +10,8 @@ class ProtobufWriter:
     def write_message(
         self,
         topic: str,
-        message: Any,
+        message: Any | bytes,
+        type = None,
         log_time: Optional[int] = None,
         publish_time: Optional[int] = None,
         sequence: int = 0,
@@ -26,10 +27,16 @@ class ProtobufWriter:
             Will default to the current time if not specified.
         @param sequence: An optional sequence number.
         """
-        msg_typename = type(message).DESCRIPTOR.full_name
+        from google.protobuf.message import Message
+        if isinstance(message, Message):
+            desc = message.DESCRIPTOR
+        else:
+            desc = type.DESCRIPTOR
+
+        msg_typename = desc.full_name
         schema_id = self.__schema_ids.get(msg_typename)
         if schema_id is None:
-            schema_id = register_schema(self.__writer, type(message))
+            schema_id = register_schema(self.__writer, desc)
             self.__schema_ids[msg_typename] = schema_id
 
         channel_id = self.__channel_ids.get(topic)
@@ -46,5 +53,5 @@ class ProtobufWriter:
             log_time=log_time,
             publish_time=publish_time or log_time,
             sequence=sequence,
-            data=message.SerializeToString(),
+            data=message.SerializeToString() if isinstance(message, Message) else message,
         )

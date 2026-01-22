@@ -6,10 +6,14 @@ defaults:
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
 
+camera:
+  instance:
+    port: /dev/video6
+
 # Debug
 debug: false
 debug_hand: false
-sim: true               # 使用模拟模式
+sim: false               # 使用模拟模式
 wait_time: 5.0
 frequency: 100          # 控制循环频率
 use_waist: false

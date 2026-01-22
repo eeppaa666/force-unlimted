@@ -31,12 +31,11 @@ def collect_schema_with_deps(desc: FileDescriptor) -> descriptor_pb2.FileDescrip
     add_deps(desc)
     return fds
 
-def register_schema(writer, message_type) -> int:
+def register_schema(writer, desc) -> int:
     """
     Registers the schema for the given protobuf message type with the MCAP writer.
     Returns the schema ID assigned by the writer.
     """
-    desc = message_type.DESCRIPTOR
     fds = collect_schema_with_deps(desc.file)
     schema_bytes = fds.SerializeToString()
     schema_name = desc.full_name

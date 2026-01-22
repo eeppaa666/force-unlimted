@@ -13,10 +13,22 @@ python3 src/fk/src/fk_node.py --frequency=60
 export CYCLONEDDS_HOME=/root/code/cyclonedds-0.10.2/cyclonedds_install
 
 ## 启动 unitree controller
+conda activate controller
 python3 src/controller/src/unitree_g1_29_controller.py --unitree_dds_fps 60 --ros_msg_fps 60  --open_img_pub True --image_fps 10 --img_server_ip 10.106.1.95
 
 ## 启动 fourier controller
+conda activate fourier
 python3 src/controller/src/fourier_gr1_t1_controller.py
 
 # 启动 foxglove 可视化
 python3 src/foxglove/src/server.py
+
+# docker
+docker run -it \
+    --name ros_container \
+    --net=host \
+    --privileged \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    -v /dev:/dev \
+    ros:jazzy

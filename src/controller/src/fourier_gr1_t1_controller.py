@@ -285,6 +285,24 @@ class FourierGR1T1Controller(ControllerInterface):
                 state.ParseFromString(binary_data)
                 if self._msg_count % 100 > 95:
                     logging.info(f"Get {TRACK_STATE_TOPIC} msg")
+
+                if state.start_track:
+                    from fourier.utils import LEFT_HAND_TRIGGER_QPOS, RIGHT_HAND_TRIGGER_QPOS
+                    if state.left_ctrl_trigger_value >= 0:
+                        scale = state.left_ctrl_trigger_value if state.left_ctrl_trigger_value > 0 else 0.1
+                        left = np.array(LEFT_HAND_TRIGGER_QPOS)
+                        left[:8] = left[:8] *  (abs(scale) if abs(scale) <= 1.0 else 0)
+
+                        left, _ = self._fourier_dex_reboot.hand_action_convert(left, np.array(RIGHT_HAND_TRIGGER_QPOS))
+                        self._fourier_left_hand.set_positions(left)
+
+                    if state.right_ctrl_trigger_value >= 0:
+                        right = np.array(RIGHT_HAND_TRIGGER_QPOS)
+                        right[:8] = right[:8] *  (abs(state.right_ctrl_trigger_value) if abs(state.right_ctrl_trigger_value) <= 1.0 else 0)
+
+                        _, right = self._fourier_dex_reboot.hand_action_convert(np.array(LEFT_HAND_TRIGGER_QPOS), right)
+                        # self._fourier_right_hand.set_positions(right)
+
                 # from google.protobuf import json_format
                 # json_string = json_format.MessageToJson(state,
                 #     always_print_fields_with_no_presence=True, # 强制包含默认值字段

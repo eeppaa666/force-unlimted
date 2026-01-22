@@ -67,17 +67,18 @@ class Gr1T1FKProcessor(FKProcessor):
             return
 
     def Process(self, tele_state: TeleState):
-        if not tele_state.start_track:
-            tfs = self._arm_fk.get_init_tfs()
-        else:
-            if self._node.args.use_ik_sol:
+        if self._node.args.use_ik_sol:
+            if not tele_state.start_track:
+                tfs = self._arm_fk.get_init_tfs()
+            else:
                 with self._ik_sol_lock:
                     input_q = np.array(self._ik_sol.dual_arm_sol_q, dtype=np.float64)
-            else:
-                with self._low_state_lock:
-                    low_state_copy = UnitTreeLowState()
-                    low_state_copy.CopyFrom(self._low_state)
-                input_q = np.array(low_state_copy.dual_arm_q) if len(low_state_copy.dual_arm_q) == 14 else None
+                    tfs = self._arm_fk.compute_all_fk(input_q)
+        else:
+            with self._low_state_lock:
+                low_state_copy = UnitTreeLowState()
+                low_state_copy.CopyFrom(self._low_state)
+            input_q = np.array(low_state_copy.dual_arm_q) if len(low_state_copy.dual_arm_q) == 14 else None
                 # cur_dual_arm_dq = np.array(low_state_copy.dual_arm_dq) if len(low_state_copy.dual_arm_dq) == 14 else None
             # ik_sol fk
             tfs = self._arm_fk.compute_all_fk(input_q)
