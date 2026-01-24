@@ -13,6 +13,10 @@ from foxglove.Pose_pb2 import Pose
 from foxglove.Vector3_pb2 import Vector3
 from foxglove.Quaternion_pb2 import Quaternion
 
+import os
+this_file = os.path.abspath(__file__)
+PROJECT_PROOT = os.path.abspath(os.path.join(os.path.dirname(this_file), '../..'))
+
 def safe_mat_update(default_mat, mat):
     # Return previous matrix and False flag if the new matrix is non-singular (determinant ≠ 0).
     det = np.linalg.det(mat)
@@ -122,8 +126,4 @@ def Pose2matrix(pose: Pose) -> np.ndarray:
 def WebXR2RobotForEEPose(ee_mat: np.ndarray) -> np.ndarray:
     # Change basis convention
     ee_pose_from_robotWorld = T_ROBOT_OPENXR @ ee_mat @ T_OPENXR_ROBOT
-    # Transfer from WORLD to HEAD coordinate (translation adjustment only)
-    ee_pose_from_head_pose_robotWorld = np.eye(4)
-    ee_pose_from_head_pose_robotWorld[0:3, 3] = ee_pose_from_robotWorld[0:3, 3]
-    ee_pose_from_head_pose_robotWorld[0:3, 0:3] = ee_pose_from_robotWorld[0:3, 0:3]
-    return ee_pose_from_head_pose_robotWorld
+    return ee_pose_from_robotWorld

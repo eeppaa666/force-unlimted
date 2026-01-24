@@ -2,6 +2,10 @@ from abc import ABC, abstractmethod
 from teleop.tele_pose_pb2 import TeleState
 
 class IKProcessor(ABC):
+    def AddArgs(args) -> None:
+        """添加命令行参数的模板方法（可选重写）"""
+        pass
+
     """数据处理的模板类"""
     @abstractmethod
     def Process(self, tele_state: TeleState):  # 模板方法（不可重写）

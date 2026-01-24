@@ -72,8 +72,10 @@ class Gr1T1FKProcessor(FKProcessor):
                 tfs = self._arm_fk.get_init_tfs()
             else:
                 with self._ik_sol_lock:
-                    input_q = np.array(self._ik_sol.dual_arm_sol_q, dtype=np.float64)
-                    tfs = self._arm_fk.compute_all_fk(input_q)
+                    sol = UnitTreeIkSol()
+                    sol.CopyFrom(self._ik_sol)
+                input_q = np.array(sol.dual_arm_sol_q, dtype=np.float64)
+                tfs = self._arm_fk.compute_all_fk(input_q, sol.left_hand_q, sol.right_hand_q)
         else:
             with self._low_state_lock:
                 low_state_copy = UnitTreeLowState()

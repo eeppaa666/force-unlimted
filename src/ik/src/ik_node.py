@@ -41,6 +41,7 @@ class IkNode(Node):
         self._state = TeleState()
         self._state_flush_cnt: np.uint = 0
         self._state_prev_cnt: np.uint = 0
+        self._args = args
 
         self._ik_timer = self.create_timer(1.0 / args.frequency, self.ikProcessCallback)
         # from ik.src.unitree.g1_29_ik_processor import G129IkProcessor
@@ -48,6 +49,10 @@ class IkNode(Node):
         if args.robot not in IK_PROCESSOR_MAP:
             raise ValueError(f"not support this robot type {args.robot}")
         self._ik_processor: IKProcessor = IK_PROCESSOR_MAP[args.robot](self)
+
+    @property
+    def args(self):
+        return self._args
 
     def ikProcessCallback(self):
         with self._state_lock:
@@ -82,6 +87,9 @@ def main():
     parser.add_argument('--log_level', type=str, default='info', help='Logging level')
     parser.add_argument('--robot', type=str, default='unitree_g1_29', help="Robot type")
 
+    args, other_args = parser.parse_known_args()
+
+    IK_PROCESSOR_MAP[args.robot].AddArgs(parser)
     args, other_args = parser.parse_known_args()
 
     logging.getLogger().setLevel(args.log_level.upper())

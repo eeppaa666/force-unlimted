@@ -14,4 +14,6 @@ message UnitTreeIkSol {
     repeated double dual_arm_sol_q = 2;
     repeated double dual_arm_sol_tauff = 3;
     DebugInfo debug_info = 4;
+    repeated double left_hand_q = 5;
+    repeated double right_hand_q = 6;
 }

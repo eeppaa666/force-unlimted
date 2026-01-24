@@ -79,4 +79,6 @@ message TeleState {
     double right_hand_pinch_value = 32;
     bool right_hand_squeeze = 33;
     double right_hand_squeeze_value = 34;
+
+    bool use_hand_track = 35;
 }

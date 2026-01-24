@@ -99,6 +99,8 @@ class TeleopPublisher(Node):
         else:
             state.start_track = True
 
+        state.use_hand_track = self.args.use_hand_track
+
         state.base_link.extend(Pose2Matrix(self.base_link).flatten())
         state.timestamp.seconds = time.time_ns() // 1_000_000_000
         state.timestamp.nanos = time.time_ns() % 1_000_000_000
@@ -189,7 +191,6 @@ class TeleopPublisher(Node):
             right_xy = [0, 0]
             if right_hand_pinch:
                 right_xy[1] = -(self.tv.right_arm_pose[1, 3] - self.prev_right_hand_pinch_y)
-
 
         head_mat = self.tv.head_pose
         head_mat = T_ROBOT_OPENXR @ head_mat

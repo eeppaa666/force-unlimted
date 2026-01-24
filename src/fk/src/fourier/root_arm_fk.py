@@ -24,10 +24,9 @@ class Gr1T1_ArmFK:
         self.Visualization = Visualization
 
         # fixed cache file path
-        self.cache_path = "fourier_model_cache.pkl"
-
-        self.urdf_path = os.path.join(project_root, '../assets/fourier/urdf/gr1t1_fourier_hand_6dof.urdf')
-        self.model_dir = os.path.join(project_root, '../assets/fourier/')
+        self.cache_path = "fk_fourier_model_cache.pkl"
+        self.urdf_path = os.path.join(project_root, '../assets/fourier/urdf/GR1T1_fourier_hand_6dof.urdf')
+        self.model_dir = os.path.join(project_root, '../assets/fourier/urdf')
 
         # Try loading cache first
         if os.path.exists(self.cache_path) and (not self.Visualization):
@@ -42,16 +41,16 @@ class Gr1T1_ArmFK:
                 "right_hip_roll_joint", "right_hip_yaw_joint", "right_hip_pitch_joint", "right_knee_pitch_joint", "right_ankle_pitch_joint", "right_ankle_roll_joint",
                 "waist_yaw_joint", "waist_pitch_joint", "waist_roll_joint",
                 "head_yaw_joint", "head_roll_joint", "head_pitch_joint",
-                "L_thumb_proximal_yaw_joint", "L_thumb_proximal_pitch_joint", "L_thumb_distal_joint",
-                "L_index_proximal_joint", "L_index_intermediate_joint",
-                "L_middle_proximal_joint", "L_middle_intermediate_joint",
-                "L_ring_proximal_joint", "L_ring_intermediate_joint",
-                "L_pinky_proximal_joint", "L_pinky_intermediate_joint",
-                "R_thumb_proximal_yaw_joint", "R_thumb_proximal_pitch_joint", "R_thumb_distal_joint",
-                "R_index_proximal_joint", "R_index_intermediate_joint",
-                "R_middle_proximal_joint", "R_middle_intermediate_joint",
-                "R_ring_proximal_joint", "R_ring_intermediate_joint",
-                "R_pinky_proximal_joint", "R_pinky_intermediate_joint"
+                # "L_thumb_proximal_yaw_joint", "L_thumb_proximal_pitch_joint", "L_thumb_distal_joint",
+                # "L_index_proximal_joint", "L_index_intermediate_joint",
+                # "L_middle_proximal_joint", "L_middle_intermediate_joint",
+                # "L_ring_proximal_joint", "L_ring_intermediate_joint",
+                # "L_pinky_proximal_joint", "L_pinky_intermediate_joint",
+                # "R_thumb_proximal_yaw_joint", "R_thumb_proximal_pitch_joint", "R_thumb_distal_joint",
+                # "R_index_proximal_joint", "R_index_intermediate_joint",
+                # "R_middle_proximal_joint", "R_middle_intermediate_joint",
+                # "R_ring_proximal_joint", "R_ring_intermediate_joint",
+                # "R_pinky_proximal_joint", "R_pinky_intermediate_joint"
             ]
 
             self.reduced_robot = self.robot.buildReducedRobot(
@@ -82,12 +81,48 @@ class Gr1T1_ArmFK:
 
         self.data = self.reduced_robot.model.createData()
 
+        self.active_finger_joints = [
+            'L_index_proximal_joint', 'L_index_intermediate_joint', 'L_middle_proximal_joint',
+            'L_middle_intermediate_joint', 'L_pinky_proximal_joint',
+            'L_pinky_intermediate_joint', 'L_ring_proximal_joint', 'L_ring_intermediate_joint',
+            'L_thumb_proximal_yaw_joint', 'L_thumb_proximal_pitch_joint', 'L_thumb_distal_joint',
+
+            'R_index_proximal_joint', 'R_index_intermediate_joint', 'R_middle_proximal_joint',
+            'R_middle_intermediate_joint', 'R_pinky_proximal_joint',
+            'R_pinky_intermediate_joint', 'R_ring_proximal_joint', 'R_ring_intermediate_joint',
+            'R_thumb_proximal_yaw_joint', 'R_thumb_proximal_pitch_joint', 'R_thumb_distal_joint',
+        ]
+
+        self.active_arm_joints = [
+            "left_shoulder_pitch_joint",
+            "left_shoulder_roll_joint",
+            "left_shoulder_yaw_joint",
+            "left_elbow_pitch_joint",
+            "left_wrist_yaw_joint",
+            "left_wrist_roll_joint",
+            "left_wrist_pitch_joint",
+            "right_shoulder_pitch_joint",
+            "right_shoulder_roll_joint",
+            "right_shoulder_yaw_joint",
+            "right_elbow_pitch_joint",
+            "right_wrist_yaw_joint",
+            "right_wrist_roll_joint",
+            "right_wrist_pitch_joint",
+        ]
+
+        self.joint_name_to_q_idx = {}
+        for i in range(1, self.reduced_robot.model.njoints):
+            name = self.reduced_robot.model.names[i]
+            idx_q = self.reduced_robot.model.joints[i].idx_q
+            self.joint_name_to_q_idx[name] = idx_q
+            print(f"Joint: {name}, q index: {idx_q}")
+
         # 获取详细的 q 向量布局
-        model = self.reduced_robot.model
-        for i in range(1, model.njoints):
-            joint = model.joints[i]
-            name = model.names[i]
-            print(f"q[{joint.idx_q}] 对应关节: {name}")
+        # model = self.reduced_robot.model
+        # for i in range(1, model.njoints):
+        #     joint = model.joints[i]
+        #     name = model.names[i]
+        #     print(f"q[{joint.idx_q}] 对应关节: {name}")
 
      # Save both robot.model and reduced_robot.model
     def save_cache(self):
@@ -154,21 +189,39 @@ class Gr1T1_ArmFK:
 
         return frames_transforms
 
-    def compute_all_fk(self, q):
+    def compute_all_fk(self, q, left_finger_q=None, right_finger_q=None):
         """
         根据给定的关节角 q 计算所有 Frame (Link) 的位姿
         :param q: 关节位置向量 (numpy array)
         :return: 字典 { frame_name: 4x4_transform_matrix }
         """
         # 1. 确保 q 的维度正确
-        if q is None or len(q) != self.reduced_robot.model.nq:
-            # 如果传入的 q 只有手臂部分，可能需要补全（假设其余锁定关节为0）
-            # 这里简单处理，假设传入的就是 reduced_model 对应长度的 q
-            logging.warning(f"fk node input q invalid q:{q} nq:{self.reduced_robot.model.nq}")
-            return None
-        # 1. 创建符合 Pinocchio 要求的全 0 向量 (nq 应该是 14)
-        q_pin = pin.neutral(self.reduced_robot.model)
+        # if q is None or len(q) != self.reduced_robot.model.nq:
+        #     # 如果传入的 q 只有手臂部分，可能需要补全（假设其余锁定关节为0）
+        #     # 这里简单处理，假设传入的就是 reduced_model 对应长度的 q
+        #     logging.warning(f"fk node input q invalid q:{q} nq:{self.reduced_robot.model.nq}")
+        #     return None
 
+        q_full = pin.neutral(self.reduced_robot.model)
+
+        if left_finger_q is not None:
+            # 假设你的 left_finger_q 顺序和 self.active_finger_joints[:11] 一致
+            for i, val in enumerate(left_finger_q):
+                joint_name = self.active_finger_joints[i] # L_开头的那几个
+                if joint_name in self.joint_name_to_q_idx:
+                    q_full[self.joint_name_to_q_idx[joint_name]] = val
+
+        if right_finger_q is not None:
+            for i, val in enumerate(right_finger_q):
+                joint_name = self.active_finger_joints[i + 11] # R_开头的那几个
+                if joint_name in self.joint_name_to_q_idx:
+                    q_full[self.joint_name_to_q_idx[joint_name]] = val
+
+        for i in range(len(q)):
+            for i, val in enumerate(q):
+                joint_name = self.active_arm_joints[i]
+                if joint_name in self.joint_name_to_q_idx:
+                    q_full[self.joint_name_to_q_idx[joint_name]] = val
         # 2. 根据映射关系填值
         # 这样无论 Pinocchio 内部顺序如何，都能保证值给到了正确的关节
         # for input_idx, pin_q_idx in enumerate(self.q_index_map):
@@ -177,7 +230,7 @@ class Gr1T1_ArmFK:
         # 2. 计算 FK
         # pin.forwardKinematics 只更新 Joint
         # pin.framesForwardKinematics 更新 Joint 并同步更新所有 Frame (Link)
-        pin.framesForwardKinematics(self.reduced_robot.model, self.data, q)
+        pin.framesForwardKinematics(self.reduced_robot.model, self.data, q_full)
         # self.reduced_robot.framesForwardKinematics(q_pin)
         # 3. 提取所有 Frame 的变换矩阵
         frames_transforms = {}

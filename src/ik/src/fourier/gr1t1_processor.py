@@ -3,6 +3,7 @@ import time
 import logging
 import numpy as np
 import pinocchio as pin
+import argparse
 
 from rclpy.node import Node
 from std_msgs.msg import UInt8MultiArray
@@ -12,6 +13,7 @@ from thirdparty_sdk.fourier.robot_arm_ik_r1lite import Fourier_ArmIK
 from ik_processor_base import IKProcessor
 from common import FOURIER_IK_SOL_TOPIC, FOURIER_LOW_STATE_TOPIC
 from common import *
+from .hand import HandRetarget
 
 # proto
 from teleop.tele_pose_pb2 import TeleState
@@ -43,37 +45,44 @@ def PoseProcessEE(ee_mat: np.ndarray, base_mat: np.ndarray):
 
 def PoseProcessEEForLeftHand(ee_mat: np.ndarray, base_mat: np.ndarray):
     ee_mat[0:3, 3] = ee_mat[0:3, 3] - base_mat[0:3, 3]
-    ee_mat = ee_mat @ T_ROBOT_OPENXR
+    # ee_mat = ee_mat @ T_ROBOT_OPENXR
+
+    wrist2left = np.array([[0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=float)
+    ee_mat = ee_mat @ wrist2left
 
     trans = np.eye(4)
-    trans[0:3, 3] = [0, 0, 0.1]
+    # trans[0:3, 3] = [0.1, 0, -0.6]
+    trans[0:3, 3] = [0, 0, 0.05]
     ee_mat = ee_mat @ trans
     return ee_mat
 
 def PoseProcessEEForRightHand(ee_mat: np.ndarray, base_mat: np.ndarray):
     ee_mat[0:3, 3] = ee_mat[0:3, 3] - base_mat[0:3, 3]
 
-    R_z_90 = pin.utils.rotate('z', np.pi / 2)
-    T_rot = pin.SE3(R_z_90, np.zeros(3))
-    ee_mat = pin.SE3(ee_mat).act(T_rot).homogeneous
+    # R_z_90 = pin.utils.rotate('z', np.pi / 2)
+    # T_rot = pin.SE3(R_z_90, np.zeros(3))
+    # ee_mat = pin.SE3(ee_mat).act(T_rot).homogeneous
 
-    R_x_90 = pin.utils.rotate('x', -np.pi / 2)
-    T_rot = pin.SE3(R_x_90, np.zeros(3))
-    ee_mat = pin.SE3(ee_mat).act(T_rot).homogeneous
+    # R_x_90 = pin.utils.rotate('x', -np.pi / 2)
+    # T_rot = pin.SE3(R_x_90, np.zeros(3))
+    # ee_mat = pin.SE3(ee_mat).act(T_rot).homogeneous
 
-    # ee_mat =  ee_mat @ T_ROBOT_OPENXR
+    wrist2right = np.array([[0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float)
+    ee_mat = ee_mat @ wrist2right
 
     trans = np.eye(4)
-    trans[0:3, 3] = [0, 0, 0.1]
+    trans[0:3, 3] = [0, 0, 0.05]
     ee_mat = ee_mat @ trans
     return ee_mat
 
 
 class Gr1T1Processor(IKProcessor):
+    def AddArgs(args: argparse.ArgumentParser) -> None:
+        args.add_argument('--hand_config', type=str, default=PROJECT_PROOT + '/ik/config/fourier_dexpilot_dhx.yaml', help='Hand configuration for IK processing')
+
     def __init__(self, node: Node):
         super().__init__()
         self._node = node
-
         # low state
         self._subscription = node.create_subscription(
             UInt8MultiArray,
@@ -87,7 +96,15 @@ class Gr1T1Processor(IKProcessor):
         self._low_state = UnitTreeLowState()
         self._low_state_lock = threading.Lock()
         self._arm_ik = Fourier_ArmIK()
+        if node.args.hand_config:
+            from yaml import safe_load
+            with open(node.args.hand_config, 'r') as f:
+                self._hand_retarget = HandRetarget(cfg=safe_load(f))
         self.dq_num = 14
+        self.hand2fingers_left = np.array([[0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=float)
+        self.hand2fingers_right = np.array([[0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float)
+
+        logging.info("Gr1T1Processor initialized.")
 
     def lowStateCallback(self, msg: UInt8MultiArray):
         try:
@@ -122,19 +139,39 @@ class Gr1T1Processor(IKProcessor):
         right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat)
         head_ee_mat_robot = WebXR2RobotForEEPose(head_ee_mat)
 
-        # left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, base_link_robot)
-        # right_ee_mat_robot = PoseProcessEE(right_ee_mat_robot, base_link_robot)
-        left_ee_mat_robot = PoseProcessEEForLeftHand(left_ee_mat_robot, base_link_robot)
-        right_ee_mat_robot = PoseProcessEEForRightHand(right_ee_mat_robot, base_link_robot)
-        # ik 求解
-        sol_q, sol_tuaff = self._arm_ik.solve_ik(left_ee_mat_robot, right_ee_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)
-
         msg = UnitTreeIkSol()
+        if tele_state.use_hand_track:
+            left_wrist_mat_robot = PoseProcessEEForLeftHand(left_ee_mat_robot, base_link_robot)
+            right_wrist_mat_robot = PoseProcessEEForRightHand(right_ee_mat_robot, base_link_robot)
+            # process hand landmarks
+            left_fingers = np.append(left_ee_mat[0:3, 3], np.array(tele_state.left_hand_position)).reshape(25, 3)
+            right_fingers = np.append(right_ee_mat[0:3, 3], np.array(tele_state.right_hand_position)).reshape(25, 3)
+            left_fingers = np.concatenate([left_fingers.T, np.ones((1, left_fingers.shape[0]))])
+            right_fingers = np.concatenate([right_fingers.T, np.ones((1, right_fingers.shape[0]))])
+            left_fingers = T_ROBOT_OPENXR @ left_fingers
+            right_fingers = T_ROBOT_OPENXR @ right_fingers
+
+            rel_left_fingers = fast_mat_inv(left_ee_mat_robot) @ left_fingers
+            rel_right_fingers = fast_mat_inv(right_ee_mat_robot) @ right_fingers
+            rel_left_fingers = (self.hand2fingers_left.T @ rel_left_fingers)[0:3, :].T
+            rel_right_fingers = (self.hand2fingers_right.T @ rel_right_fingers)[0:3, :].T
+            hand_dq_left, hand_dq_right = self._hand_retarget.retarget(rel_left_fingers, rel_right_fingers)
+            # msg.left_hand_q.extend(np.zeros(11, dtype=np.float64))
+            # msg.right_hand_q.extend(np.zeros(11, dtype=np.float64))
+            msg.left_hand_q.extend(hand_dq_left)
+            msg.right_hand_q.extend(hand_dq_right)
+        else:
+            left_wrist_mat_robot = PoseProcessEE(left_ee_mat_robot, base_link_robot)
+            right_wrist_mat_robot = PoseProcessEE(right_ee_mat_robot, base_link_robot)
+
+        # ik 求解
+        sol_q, sol_tuaff = self._arm_ik.solve_ik(left_wrist_mat_robot, right_wrist_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)
+
         msg.timestamp.seconds = time.time_ns() // 1_000_000_000
         msg.timestamp.nanos = time.time_ns() % 1_000_000_000
         msg.dual_arm_sol_q.extend(sol_q)
         msg.dual_arm_sol_tauff.extend(sol_tuaff)
-        msg.debug_info.left_ee_pose.extend(left_ee_mat_robot.flatten())
-        msg.debug_info.right_ee_pose.extend(right_ee_mat_robot.flatten())
+        msg.debug_info.left_ee_pose.extend(left_wrist_mat_robot.flatten())
+        msg.debug_info.right_ee_pose.extend(right_wrist_mat_robot.flatten())
         self._publisher.publish(UInt8MultiArray(data=msg.SerializeToString()))
         logging.debug(f'Published IK solution {sol_q}, {sol_tuaff}')

@@ -54,6 +54,35 @@ def TeleopTrackState(inmsg: InMessage, callback: Callable[[OutMessage], None]):
     tf.rotation.CopyFrom(head_pose.orientation)
     out.data.transforms.append(tf)
 
+    # hand pose
+    ## left hand
+    for key, vlue in HAND_INDEX_MAP.items():
+        if vlue == 0:
+            continue
+        vlue = vlue - 1
+        tf.parent_frame_id = "webxr"
+        tf.child_frame_id = "left_"+key
+        pose = Matrix2Pose(ComposeMatrix(
+            msg.left_hand_position[vlue*3:vlue*3+3],
+            msg.left_hand_orientation[vlue*9:vlue*9+9]))
+        tf.translation.CopyFrom(pose.position)
+        tf.rotation.CopyFrom(pose.orientation)
+        out.data.transforms.append(tf)
+    ## right hand
+    for key, vlue in HAND_INDEX_MAP.items():
+        if vlue == 0:
+            continue
+        vlue = vlue - 1
+        tf.parent_frame_id = "webxr"
+        tf.child_frame_id = "right_"+key
+        pose = Matrix2Pose(ComposeMatrix(
+            msg.right_hand_position[vlue*3:vlue*3+3],
+            msg.right_hand_orientation[vlue*9:vlue*9+9]))
+        tf.translation.CopyFrom(pose.position)
+        tf.rotation.CopyFrom(pose.orientation)
+        out.data.transforms.append(tf)
+
+    # base frame
     out.data.transforms.append(
         FrameTransform(
             timestamp=TimeNs2GoogleTs(inmsg.timestamp_ns),
