@@ -19,7 +19,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, UInt8MultiArray
 
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 from ik.src.unitree.common import UNITREE_IK_SOL_TOPIC
 
 class MinimalSubscriber(Node):
@@ -34,7 +34,7 @@ class MinimalSubscriber(Node):
 
     def listener_callback(self, msg: UInt8MultiArray):
         # 1. 创建一个空的 Protobuf 消息对象
-        state = UnitTreeIkSol()
+        state = IKSol()
 
         try:
             # 2. 关键步骤：将 ROS 消息的 data 字段转换为 bytes

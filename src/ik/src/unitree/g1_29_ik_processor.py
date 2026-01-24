@@ -14,7 +14,7 @@ from common import *
 # proto
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 
 CONST_HEAD_POSE = np.array([[1, 0, 0, 0],
                             [0, 1, 0, 1.5],
@@ -79,21 +79,25 @@ class G129IkProcessor(IKProcessor):
         cur_dual_arm_q = np.array(low_state_copy.dual_arm_q) if len(low_state_copy.dual_arm_q) == 14 else None
         cur_dual_arm_dq = np.array(low_state_copy.dual_arm_dq) if len(low_state_copy.dual_arm_dq) == 14 else None
 
-        if not tele_state.HasField("left_ee_pose") or \
-            not tele_state.HasField("right_ee_pose") or \
-            not tele_state.HasField("head_pose"):
+        if len(tele_state.left_ee_pose) == 0 or \
+            len(tele_state.right_ee_pose) == 0 or \
+            len(tele_state.head_pose) == 0:
             logging.warning("TeleState is missing required fields for IK processing.")
             return
 
         # 将xr 坐标系转换为 robot坐标系
-        left_ee_mat, _ = safe_mat_update(CONST_LEFT_ARM_POSE, Pose2matrix(tele_state.left_ee_pose))
-        right_ee_mat, _ = safe_mat_update(CONST_RIGHT_ARM_POSE ,Pose2matrix(tele_state.right_ee_pose))
-        head_ee_mat, _ = safe_mat_update(CONST_HEAD_POSE, Pose2matrix(tele_state.head_pose))
+        left_ee_mat = np.array(tele_state.left_ee_pose, dtype=np.float64).reshape(4, 4)
+        right_ee_mat = np.array(tele_state.right_ee_pose, dtype=np.float64).reshape(4, 4)
+        head_ee_mat = np.array(tele_state.head_pose, dtype=np.float64).reshape(4, 4)
+        base_link_robot = np.array(tele_state.base_link, dtype=np.float64).reshape(4, 4)
+
+        left_ee_mat, _ = safe_mat_update(CONST_LEFT_ARM_POSE, left_ee_mat)
+        right_ee_mat, _ = safe_mat_update(CONST_RIGHT_ARM_POSE ,right_ee_mat)
+        head_ee_mat, _ = safe_mat_update(CONST_HEAD_POSE, head_ee_mat)
 
         left_ee_mat_robot = WebXR2RobotForEEPose(left_ee_mat)
         right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat)
         head_ee_mat_robot = WebXR2RobotForEEPose(head_ee_mat)
-        base_link_robot = Pose2matrix(tele_state.base_link)
 
         # postprocess
         left_ee_mat_robot = PoseProcessEE(left_ee_mat_robot, base_link_robot)
@@ -102,7 +106,7 @@ class G129IkProcessor(IKProcessor):
         # ik 求解
         sol_q, sol_tuaff = self._arm_ik.solve_ik(left_ee_mat_robot, right_ee_mat_robot, cur_dual_arm_q, cur_dual_arm_dq)
 
-        msg = UnitTreeIkSol()
+        msg = IKSol()
         msg.timestamp.seconds = time.time_ns() // 1_000_000_000
         msg.timestamp.nanos = time.time_ns() % 1_000_000_000
         msg.dual_arm_sol_q.extend(sol_q)

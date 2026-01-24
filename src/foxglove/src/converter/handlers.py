@@ -56,31 +56,33 @@ def TeleopTrackState(inmsg: InMessage, callback: Callable[[OutMessage], None]):
 
     # hand pose
     ## left hand
-    for key, vlue in HAND_INDEX_MAP.items():
-        if vlue == 0:
-            continue
-        vlue = vlue - 1
-        tf.parent_frame_id = "webxr"
-        tf.child_frame_id = "left_"+key
-        pose = Matrix2Pose(ComposeMatrix(
-            msg.left_hand_position[vlue*3:vlue*3+3],
-            msg.left_hand_orientation[vlue*9:vlue*9+9]))
-        tf.translation.CopyFrom(pose.position)
-        tf.rotation.CopyFrom(pose.orientation)
-        out.data.transforms.append(tf)
+    if msg.left_hand_position != [] and msg.left_hand_orientation != []:
+        for key, vlue in HAND_INDEX_MAP.items():
+            if vlue == 0:
+                continue
+            vlue = vlue - 1
+            tf.parent_frame_id = "webxr"
+            tf.child_frame_id = "left_"+key
+            pose = Matrix2Pose(ComposeMatrix(
+                msg.left_hand_position[vlue*3:vlue*3+3],
+                msg.left_hand_orientation[vlue*9:vlue*9+9]))
+            tf.translation.CopyFrom(pose.position)
+            tf.rotation.CopyFrom(pose.orientation)
+            out.data.transforms.append(tf)
     ## right hand
-    for key, vlue in HAND_INDEX_MAP.items():
-        if vlue == 0:
-            continue
-        vlue = vlue - 1
-        tf.parent_frame_id = "webxr"
-        tf.child_frame_id = "right_"+key
-        pose = Matrix2Pose(ComposeMatrix(
-            msg.right_hand_position[vlue*3:vlue*3+3],
-            msg.right_hand_orientation[vlue*9:vlue*9+9]))
-        tf.translation.CopyFrom(pose.position)
-        tf.rotation.CopyFrom(pose.orientation)
-        out.data.transforms.append(tf)
+    if msg.right_hand_position != [] and msg.right_hand_orientation != []:
+        for key, vlue in HAND_INDEX_MAP.items():
+            if vlue == 0:
+                continue
+            vlue = vlue - 1
+            tf.parent_frame_id = "webxr"
+            tf.child_frame_id = "right_"+key
+            pose = Matrix2Pose(ComposeMatrix(
+                msg.right_hand_position[vlue*3:vlue*3+3],
+                msg.right_hand_orientation[vlue*9:vlue*9+9]))
+            tf.translation.CopyFrom(pose.position)
+            tf.rotation.CopyFrom(pose.orientation)
+            out.data.transforms.append(tf)
 
     # base frame
     out.data.transforms.append(
@@ -111,15 +113,15 @@ def TeleopTrackState(inmsg: InMessage, callback: Callable[[OutMessage], None]):
     callback(out1)
 
 def UnitreeIKsol(inmsg: InMessage, callback: Callable[[OutMessage], None]):
-    from ik.ik_sol_pb2 import UnitTreeIkSol
-    msg = UnitTreeIkSol()
+    from ik.ik_sol_pb2 import IKSol
+    msg = IKSol()
     msg.ParseFromString(inmsg.data)
 
     out1 = OutMessage()
     out1.channel = inmsg.topic
     out1.timestamp_ns = inmsg.timestamp_ns
     out1.data = msg
-    # out.type = UnitTreeIkSol()
+    # out.type = IKSol()
     callback(out1)
 
     out = OutMessage()

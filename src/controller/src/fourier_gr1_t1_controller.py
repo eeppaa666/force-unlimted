@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.join(project_root, '../proto/generate'))
 # 引入 Protobuf 消息
 # =========================
 from controller.state_pb2 import UnitTreeLowState
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 from teleop.tele_pose_pb2 import TeleState
 from image.image_pb2 import ImageFrame
 from controller.teleoperation_pb2 import FourierTeleoperation
@@ -79,7 +79,7 @@ class FourierGR1T1Controller(ControllerInterface):
 
         self._msg_count       = 0
         self._publisher_control = {}
-        self._ik_sol      = UnitTreeIkSol()
+        self._ik_sol      = IKSol()
         self._low_state   = UnitTreeLowState()
         temp_image_state = ImageFrame()
         self._image_msg   = UInt8MultiArray()
@@ -240,7 +240,7 @@ class FourierGR1T1Controller(ControllerInterface):
         self._msg_count += 1
 
         if topic_name is FOURIER_IK_SOL_TOPIC:
-            state = UnitTreeIkSol()
+            state = IKSol()
             debug_visiable_state = FourierTeleoperation()
             try:
                 binary_data = bytes(msg.data)

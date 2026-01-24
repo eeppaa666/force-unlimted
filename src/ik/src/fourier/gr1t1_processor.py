@@ -18,7 +18,7 @@ from .hand import HandRetarget
 # proto
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 
 def PoseProcessEE(ee_mat: np.ndarray, base_mat: np.ndarray):
     ee_mat[0:3, 3] = ee_mat[0:3, 3] - base_mat[0:3, 3]
@@ -139,7 +139,7 @@ class Gr1T1Processor(IKProcessor):
         right_ee_mat_robot = WebXR2RobotForEEPose(right_ee_mat)
         head_ee_mat_robot = WebXR2RobotForEEPose(head_ee_mat)
 
-        msg = UnitTreeIkSol()
+        msg = IKSol()
         if tele_state.use_hand_track:
             left_wrist_mat_robot = PoseProcessEEForLeftHand(left_ee_mat_robot, base_link_robot)
             right_wrist_mat_robot = PoseProcessEEForRightHand(right_ee_mat_robot, base_link_robot)

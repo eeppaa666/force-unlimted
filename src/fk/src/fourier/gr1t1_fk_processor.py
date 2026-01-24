@@ -12,7 +12,7 @@ from .root_arm_fk import Gr1T1_ArmFK
 from common import FOURIER_FK_TRANSFRAME, TimeNs2GoogleTs
 
 # proto
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
 from foxglove.FrameTransforms_pb2 import FrameTransforms
@@ -41,7 +41,7 @@ class Gr1T1FKProcessor(FKProcessor):
 
         self._low_state = UnitTreeLowState()
         self._low_state_lock = threading.Lock()
-        self._ik_sol = UnitTreeIkSol()
+        self._ik_sol = IKSol()
         self._ik_sol_lock = threading.Lock()
 
         self._arm_fk = Gr1T1_ArmFK()
@@ -58,7 +58,7 @@ class Gr1T1FKProcessor(FKProcessor):
 
     def ikSolCallback(self, msg: UInt8MultiArray):
         try:
-            ik_sol = UnitTreeIkSol()
+            ik_sol = IKSol()
             ik_sol.ParseFromString(bytes(msg.data))
             with self._ik_sol_lock:
                 self._ik_sol.CopyFrom(ik_sol)
@@ -72,7 +72,7 @@ class Gr1T1FKProcessor(FKProcessor):
                 tfs = self._arm_fk.get_init_tfs()
             else:
                 with self._ik_sol_lock:
-                    sol = UnitTreeIkSol()
+                    sol = IKSol()
                     sol.CopyFrom(self._ik_sol)
                 input_q = np.array(sol.dual_arm_sol_q, dtype=np.float64)
                 tfs = self._arm_fk.compute_all_fk(input_q, sol.left_hand_q, sol.right_hand_q)

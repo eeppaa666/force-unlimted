@@ -12,7 +12,7 @@ from .root_arm_fk import G1_29_ArmFK
 from common import UNITREE_FK_TRANSFRAME, TimeNs2GoogleTs
 
 # proto
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
 from foxglove.FrameTransforms_pb2 import FrameTransforms
@@ -41,7 +41,7 @@ class G129FKProcessor(FKProcessor):
 
         self._low_state = UnitTreeLowState()
         self._low_state_lock = threading.Lock()
-        self._ik_sol = UnitTreeIkSol()
+        self._ik_sol = IKSol()
         self._ik_sol_lock = threading.Lock()
 
         self._arm_fk = G1_29_ArmFK()
@@ -58,7 +58,7 @@ class G129FKProcessor(FKProcessor):
 
     def ikSolCallback(self, msg: UInt8MultiArray):
         try:
-            ik_sol = UnitTreeIkSol()
+            ik_sol = IKSol()
             ik_sol.ParseFromString(bytes(msg.data))
             with self._ik_sol_lock:
                 self._ik_sol.CopyFrom(ik_sol)

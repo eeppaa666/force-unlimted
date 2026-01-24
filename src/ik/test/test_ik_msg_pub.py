@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(project_root, '../proto/generate'))
 # proto
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 
 import logging
 import argparse
@@ -17,7 +17,7 @@ import numpy as np
 # proto
 from teleop.tele_pose_pb2 import TeleState
 from controller.state_pb2 import UnitTreeLowState
-from ik.ik_sol_pb2 import UnitTreeIkSol
+from ik.ik_sol_pb2 import IKSol
 from multiprocessing_logging import install_mp_handler
 logging.basicConfig(
     level=logging.INFO,
@@ -69,7 +69,7 @@ class IkNode(Node):
 
     def ikProcessCallback(self):
         import time
-        msg = UnitTreeIkSol()
+        msg = IKSol()
         msg.timestamp.seconds = time.time_ns() // 1_000_000_000
         msg.timestamp.nanos = time.time_ns() % 1_000_000_000
         sol_q, sol_tauff, left_ee_mat, right_ee_mat = self.generate_fake_dual_arm_ik()
