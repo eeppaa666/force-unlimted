@@ -24,11 +24,11 @@ python3 src/controller/src/fourier_gr1_t1_controller.py
 python3 src/foxglove/src/server.py
 
 # docker
-docker run -it \
-    --name ros_container \
-    --net=host \
-    --privileged \
-    -e DISPLAY=$DISPLAY \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -v /dev:/dev \
-    ros:jazzy
+**镜像地址**：
+
+\<your code path\> 是宿主机代码绝对路径
+## 启动 infra ros docker
+docker run -it --rm --name ros_container --net=host --privileged -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /dev:/dev -v <your code path>:/root/workspace  infra_ros:v1.0 /bin/bash
+
+## 启动 fourier ros docker
+docker run -it --rm --name ros_container --net=host --privileged -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /dev:/dev -v <your code path>:/root/workspace  fourier_ros:v1.0 /bin/bash
