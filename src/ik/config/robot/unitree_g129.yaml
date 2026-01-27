@@ -1,1 +1,5 @@
+defaults:
+    - _self_
+    - hand: unitree_dex3
+
 type: unitree_g1_29

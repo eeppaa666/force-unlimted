@@ -1,7 +1,5 @@
 # 启动teleop server
 python3 src/teleop/src/teleop_server.py
-## 启动 teleop sub查看消息
-python3 src/teleop/test/test_teleop_sub.py
 
 # 启动ik
 python3 src/ik/src/ik_node.py

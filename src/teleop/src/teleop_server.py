@@ -89,22 +89,21 @@ class TeleopPublisher(Node):
             self.tv.render_to_xr(img)
 
 
-    def _set_start_track(self, trigger_button: bool):
-        cur_left_a: bool = trigger_button
-        if cur_left_a != self.prev_left_track_button:
-            if cur_left_a == True and not self.start_track:
+    def _set_start_track(self, trigger_button_a: bool, trigger_button_b: bool):
+        if trigger_button_a != self.prev_left_track_button:
+            if trigger_button_a == True and trigger_button_b and not self.start_track:
                 self.start_track = True
                 logging.info("start teleop track")
-            elif cur_left_a == True and self.start_track:
+            elif trigger_button_a == True and trigger_button_b and self.start_track:
                 self.start_track = False
                 logging.info("stop teleop track")
-            self.prev_left_track_button = cur_left_a
+            self.prev_left_track_button = trigger_button_a
 
     def _timer_pub_callback(self):
         if not self.args.use_hand_track:
-            self._set_start_track(self.tv.left_ctrl_aButton)
+            self._set_start_track(self.tv.left_ctrl_aButton, True)
         else:
-            self._set_start_track(self.tv.left_hand_pinch)
+            self._set_start_track(self.tv.left_hand_pinch, self.tv.right_hand_pinch)
 
         state = TeleState()
         if not self.start_track:

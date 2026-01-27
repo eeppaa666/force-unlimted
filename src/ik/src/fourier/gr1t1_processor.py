@@ -153,8 +153,7 @@ class Gr1T1Processor(IKProcessor):
             rel_left_fingers = (self.hand2fingers_left.T @ rel_left_fingers)[0:3, :].T
             rel_right_fingers = (self.hand2fingers_right.T @ rel_right_fingers)[0:3, :].T
             hand_dq_left, hand_dq_right = self._hand_retarget.retarget(rel_left_fingers, rel_right_fingers)
-            # msg.left_hand_q.extend(np.zeros(11, dtype=np.float64))
-            # msg.right_hand_q.extend(np.zeros(11, dtype=np.float64))
+
             msg.left_hand_q.extend(hand_dq_left)
             msg.right_hand_q.extend(hand_dq_right)
         else:
