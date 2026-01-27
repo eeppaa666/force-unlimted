@@ -96,10 +96,8 @@ class Gr1T1Processor(IKProcessor):
         self._low_state = UnitTreeLowState()
         self._low_state_lock = threading.Lock()
         self._arm_ik = Fourier_ArmIK()
-        if node.args.hand_config:
-            from yaml import safe_load
-            with open(node.args.hand_config, 'r') as f:
-                self._hand_retarget = HandRetarget(cfg=safe_load(f))
+        if node.args.robot.hand:
+            self._hand_retarget = HandRetarget(cfg=node.args.robot.hand)
         self.dq_num = 14
         self.hand2fingers_left = np.array([[0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=float)
         self.hand2fingers_right = np.array([[0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float)

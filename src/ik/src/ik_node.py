@@ -6,9 +6,10 @@ if project_root not in sys.path:
 sys.path.insert(0, os.path.join(project_root, '../proto/generate'))
 
 import logging
-import argparse
 import threading
 import numpy as np
+from omegaconf import DictConfig, OmegaConf
+import hydra
 
 from multiprocessing_logging import install_mp_handler
 logging.basicConfig(
@@ -28,7 +29,7 @@ from ik.src.ik_processor_base import IKProcessor
 from ik_register import IK_PROCESSOR_MAP
 
 class IkNode(Node):
-    def __init__(self, args: argparse.Namespace):
+    def __init__(self, args: DictConfig):
         super().__init__('ik_node')
         logging.info(f"IK Node frequency set to: {args.frequency} Hz")
         self._subscription = self.create_subscription(
@@ -46,9 +47,9 @@ class IkNode(Node):
         self._ik_timer = self.create_timer(1.0 / args.frequency, self.ikProcessCallback)
         # from ik.src.unitree.g1_29_ik_processor import G129IkProcessor
         # self._ik_processor: IKProcessor = G129IkProcessor(self)
-        if args.robot not in IK_PROCESSOR_MAP:
-            raise ValueError(f"not support this robot type {args.robot}")
-        self._ik_processor: IKProcessor = IK_PROCESSOR_MAP[args.robot](self)
+        if args.robot.type not in IK_PROCESSOR_MAP:
+            raise ValueError(f"not support this robot type {args.robot.type}")
+        self._ik_processor: IKProcessor = IK_PROCESSOR_MAP[args.robot.type](self)
 
     @property
     def args(self):
@@ -81,21 +82,14 @@ class IkNode(Node):
             self.get_logger().error(f'解析 Protobuf 失败: {e}')
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--frequency", type=float, default=30.0, help="Publishing frequency in Hz")
-    parser.add_argument('--log_level', type=str, default='info', help='Logging level')
-    parser.add_argument('--robot', type=str, default='unitree_g1_29', help="Robot type")
+@hydra.main(version_base=None, config_path="../config", config_name="config")
+def main(cfg: DictConfig):
+    print(OmegaConf.to_yaml(cfg, resolve=True))
 
-    args, other_args = parser.parse_known_args()
-
-    IK_PROCESSOR_MAP[args.robot].AddArgs(parser)
-    args, other_args = parser.parse_known_args()
-
-    logging.getLogger().setLevel(args.log_level.upper())
+    logging.getLogger().setLevel(cfg.log_level.upper())
     try:
-        rclpy.init(args=other_args)
-        node = IkNode(args)
+        rclpy.init(args=sys.argv[1:])
+        node = IkNode(cfg)
         rclpy.spin(node)
         rclpy.shutdown()
     except KeyboardInterrupt:

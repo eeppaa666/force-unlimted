@@ -5,8 +5,9 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 sys.path.insert(0, os.path.join(project_root, '../proto/generate'))
 
-import argparse
 import time
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
 import logging
 from multiprocessing_logging import install_mp_handler
@@ -22,40 +23,43 @@ from std_msgs.msg import String, UInt8MultiArray
 from foxglove.Pose_pb2 import Pose
 from foxglove.Quaternion_pb2 import Quaternion
 from foxglove.Vector3_pb2 import Vector3
+from image.image_pb2 import ImageFrame
 
 from teleop.src.utils import *
 from teleop.src.televuer.televuer import TeleVuer
 from teleop.tele_pose_pb2 import TeleState
-from teleop.src.common import TRACK_STATE_TOPIC
+from teleop.src.common import TRACK_STATE_TOPIC, TELEOP_HEAD_TOPIC
 
 class TeleopPublisher(Node):
-    def __init__(self, args: argparse.Namespace):
+    def __init__(self, args: DictConfig):
         super().__init__('teleop_publisher')
 
-        # teleimager, if you want to test real image streaming, make sure teleimager server is running
-        from  image_manager.src.teleimager.image_client import ImageClient
-        self.img_client = ImageClient(host=args.image_server_host)
-        camera_config = self.img_client.get_cam_config()
+        # # teleimager, if you want to test real image streaming, make sure teleimager server is running
+        # from  image_manager.src.teleimager.image_client import ImageClient
+        # self.img_client = ImageClient(host=args.image_server_host)
+        # camera_config = self.img_client.get_cam_config()
 
         # teleimager + televuer
         self.tv = TeleVuer(use_hand_tracking=args.use_hand_track,
-                    binocular=camera_config['head_camera']['binocular'],
-                    img_shape=camera_config['head_camera']['image_shape'],
-                    display_fps=camera_config['head_camera']['fps'],
+                    binocular=args.binocular,
+                    img_shape=args.image_shape,
+                    display_fps=args.image_frequency,
                     display_mode=args.display_mode,   # "ego" or "immersive" or "pass-through"
-                    dds=camera_config['head_camera']['enable_zmq'],
-                    webrtc=camera_config['head_camera']['enable_webrtc'],
-                    webrtc_url=f"https://{args.image_server_host}:{camera_config['head_camera']['webrtc_port']}/offer"
+                    dds=not args.use_webrtc,
+                    webrtc=args.use_webrtc,
+                    webrtc_url=f"https://{args.webrtc_url}/offer"
         )
 
         self.args = args
-        self._publisher = self.create_publisher(UInt8MultiArray, TRACK_STATE_TOPIC, 10)
 
+        # teleop track data pub
+        self._publisher = self.create_publisher(UInt8MultiArray, TRACK_STATE_TOPIC, 10)
         time_priod = 1.0 / args.pub_frequency
         self.timer = self.create_timer(time_priod, self._timer_pub_callback) #0.5 seconds
 
-        image_time_priod = 1.0 / args.image_frequency
-        self.image_timer = self.create_timer(image_time_priod, self._timer_image_callback)
+        # iamge sub
+        self.image_sub = self.create_subscription(UInt8MultiArray, TELEOP_HEAD_TOPIC, self._timer_image_callback, 10)
+
         self.start_track = False
         self.base_link = Pose(position=Vector3(x=0, y=0, z=0), orientation=Quaternion(x=0, y=0, z=0, w=1))
         self.prev_left_track_button = False
@@ -65,13 +69,26 @@ class TeleopPublisher(Node):
     def __del__(self):
         self.tv.close()
 
-    def _timer_image_callback(self):
-        img, _= self.img_client.get_head_frame()
+    def _timer_image_callback(self, msg: UInt8MultiArray):
+        iamge = ImageFrame()
+        try:
+            binary_data = bytes(msg.data)
+            iamge.ParseFromString(binary_data)
+        except Exception as e:
+            self.get_logger().error(f'解析 Protobuf 失败: {e}')
+
+        if iamge.encoding != ImageFrame.ENCODING_JPEG:
+            self.get_logger().error(f'Unsupported image encoding: {iamge.encoding}')
+            return
+
+        import cv2
+        import numpy as np
+        img_array = np.frombuffer(iamge.data, dtype=np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
         if img is not None:
             self.tv.render_to_xr(img)
-            # cv2.imshow("Head Camera", img)
-        # if cv2.waitKey(1) & 0xFF == ord('q'):
-            # break
+
+
     def _set_start_track(self, trigger_button: bool):
         cur_left_a: bool = trigger_button
         if cur_left_a != self.prev_left_track_button:
@@ -205,21 +222,27 @@ class TeleopPublisher(Node):
             self.base_link.position.z -= step * right_xy[1]
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--use_hand_track', action='store_true', help='Enable hand tracking')
-    parser.add_argument('--image_server_host', type=str, default='localhost', help='Image server host')
-    parser.add_argument('--log_level', type=str, default='info', help='Logging level')
-    parser.add_argument("--pub_frequency", type=float, default=30.0, help="Publishing frequency in Hz")
-    parser.add_argument("--image_frequency", type=float, default=20.0, help="Image fetching frequency in Hz")
-    parser.add_argument("--display_mode", type=str, default="ego", help="vuer display mode")
+@hydra.main(version_base=None, config_path="../config", config_name="config")
+def main(cfg: DictConfig):
+    print(OmegaConf.to_yaml(cfg, resolve=True))
 
-    args, other_args = parser.parse_known_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--use_hand_track', action='store_true', help='Enable hand tracking')
+    # parser.add_argument('--image_server_host', type=str, default='localhost', help='Image server host')
+    # parser.add_argument('--log_level', type=str, default='info', help='Logging level')
+    # parser.add_argument("--pub_frequency", type=float, default=30.0, help="Publishing frequency in Hz")
+    # parser.add_argument("--image_frequency", type=float, default=20.0, help="Image fetching frequency in Hz")
+    # parser.add_argument("--display_mode", type=str, default="ego", help="vuer display mode")
+    # parser.add_argument('--image_shape', type=int, nargs=2, default=[720, 1280], help='Image shape H W')
+    # parser.add_argument('--binocular', action='store_true', help='Use binocular display in TeleVuer')
+    # parser.add_argument('--use_webrtc', action='store_true', help='Use WebRTC streaming in TeleVuer')
+    # parser.add_argument('--webrtc_url', type=str, default='localhost:6000', help='WebRTC signaling server URL')
+    # args, other_args = parser.parse_known_args()
 
-    logging.getLogger().setLevel(args.log_level.upper())
+    logging.getLogger().setLevel(cfg.log_level.upper())
     try:
-        rclpy.init(args=other_args)
-        minimal_publisher = TeleopPublisher(args)
+        rclpy.init(args=sys.argv[1:])
+        minimal_publisher = TeleopPublisher(cfg)
         rclpy.spin(minimal_publisher)
         rclpy.shutdown()
     except KeyboardInterrupt:

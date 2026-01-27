@@ -1,0 +1,5 @@
+defaults:
+    - _self_
+    - hand: fourier_dexpilot_dhx
+
+type: fourier_gr1t1

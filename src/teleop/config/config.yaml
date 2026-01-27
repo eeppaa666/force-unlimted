@@ -1,0 +1,22 @@
+        #  , action='store_true', help='Enable hand tracking')
+        #  , type=str, default='localhost', help='Image server host')
+        #  , type=str, default='info', help='Logging level')
+        #  , type=float, default=30.0, help="Publishing frequency in Hz")
+        #  , type=float, default=20.0, help="Image fetching frequency in Hz")
+        #  , type=str, default="ego", help="vuer display mode")
+        #  , type=int, nargs=2, default=[720, 1280], help='Image shape H W')
+        #  , action='store_true', help='Use binocular display in TeleVuer')
+        #  , action='store_true', help='Use WebRTC streaming in TeleVuer')
+        #  , type=str, default='localhost:6000', help='WebRTC signaling server URL')
+use_hand_track: false
+image_server_host: localhost
+log_level: info
+pub_frequency: 60
+image_frequency: 30
+display_mode: ego
+image_shape:
+    - 720
+    - 1280
+binocular: false
+use_webrtc: false
+webrtc_url: locahost:6000

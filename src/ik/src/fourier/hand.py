@@ -2,6 +2,8 @@ import logging
 
 import numpy as np
 from dex_retargeting.retargeting_config import RetargetingConfig
+from omegaconf import DictConfig, OmegaConf
+
 logger = logging.getLogger(__name__)
 
 from common import PROJECT_PROOT
@@ -18,11 +20,11 @@ def remap(x, old_min, old_max, new_min, new_max, clip=True):
     return new_min + tmp * (new_max - new_min)
 
 class HandRetarget:
-    def __init__(self, cfg: dict) -> None:
+    def __init__(self, cfg: DictConfig) -> None:
         assets_dir = PROJECT_PROOT + "/../assets/fourier"
         RetargetingConfig.set_default_urdf_dir(assets_dir)
-        left_retargeting_config = RetargetingConfig.from_dict(cfg=cfg["left"])
-        right_retargeting_config = RetargetingConfig.from_dict(cfg=cfg["right"])
+        left_retargeting_config = RetargetingConfig.from_dict(cfg=OmegaConf.to_container(cfg["left"], resolve=True))
+        right_retargeting_config = RetargetingConfig.from_dict(cfg=OmegaConf.to_container(cfg["right"], resolve=True))
         self.left_retargeting = left_retargeting_config.build()
         self.right_retargeting = right_retargeting_config.build()
         self.hand_type = cfg["type"]

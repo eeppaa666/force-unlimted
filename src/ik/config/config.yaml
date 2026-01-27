@@ -1,0 +1,6 @@
+defaults:
+    - _self_
+    - robot: unitree_g129
+
+frequency: 30
+log_level: info

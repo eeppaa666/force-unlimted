@@ -1,4 +1,0 @@
-# config.yaml
-ik_node:
-  ros__parameters:
-    my_param: "hello from yaml"

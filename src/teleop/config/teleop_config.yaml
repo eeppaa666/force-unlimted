@@ -1,9 +1,0 @@
-    # parser.add_argument('--use_hand_track', action='store_true', help='Enable hand tracking')
-    # parser.add_argument('--image_server_host', type=str, default='localhost', help='Image server host')
-    # parser.add_argument('--log_level', type=str, default='info', help='Logging level')
-    # parser.add_argument("--pub_frequency", type=float, default=30.0, help="Publishing frequency in Hz")
-    # parser.add_argument("--image_frequency", type=float, default=20.0, help="Image fetching frequency in Hz")
-    # parser.add_argument("--display_mode", type=str, default="ego", help="vuer display mode")
-
-    use_hand_track: false
-    image_server_host: "localhost"
