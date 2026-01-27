@@ -6,7 +6,7 @@ from omegaconf import DictConfig, OmegaConf
 
 logger = logging.getLogger(__name__)
 
-from common import PROJECT_PROOT
+from ik.src.common import PROJECT_PROOT
 
 def remap(x, old_min, old_max, new_min, new_max, clip=True):
     old_min = np.array(old_min)

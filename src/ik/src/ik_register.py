@@ -1,5 +1,5 @@
-from ik_processor_base import IKProcessor
-from unitree.g1_29_ik_processor import G129IkProcessor
+from ik.src.ik_processor_base import IKProcessor
+from ik.src.unitree.g1_29_ik_processor import G129IkProcessor
 from ik.src.fourier.gr1t1_processor import Gr1T1Processor
 from typing import Dict
 

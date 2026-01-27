@@ -7,9 +7,9 @@ from std_msgs.msg import UInt8MultiArray
 
 from ik.src.common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC, Matrix2Pose
 
-from fk_processor_base import FKProcessor
-from .root_arm_fk import G1_29_ArmFK
-from common import UNITREE_FK_TRANSFRAME, TimeNs2GoogleTs
+from fk.src.fk_processor_base import FKProcessor
+from fk.src.unitree.root_arm_fk import G1_29_ArmFK
+from fk.src.common import UNITREE_FK_TRANSFRAME, TimeNs2GoogleTs
 
 # proto
 from ik.ik_sol_pb2 import IKSol

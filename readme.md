@@ -12,6 +12,13 @@ python3 src/fk/src/fk_node.py
 # 启动 foxglove 可视化
 python3 src/foxglove/src/server.py
 
+# launch 启动 ik + fk + teleop
+## 启动unitree
+python3 src/launch.py ik/config/robot=unitree_g129 fk/config/robot=unitree_g129
+
+## 启动fourier
+python3 src/launch.py ik/config/robot=fourier_gr1t1 fk/config/robot=fourier_gr1t1
+
 # 启动controller
 export CYCLONEDDS_HOME=/root/code/cyclonedds-0.10.2/cyclonedds_install
 

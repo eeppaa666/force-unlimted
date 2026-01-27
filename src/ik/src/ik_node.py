@@ -26,7 +26,7 @@ from teleop.tele_pose_pb2 import TeleState
 from teleop.src.common import TRACK_STATE_TOPIC
 from ik.src.ik_processor_base import IKProcessor
 
-from ik_register import IK_PROCESSOR_MAP
+from ik.src.ik_register import IK_PROCESSOR_MAP
 
 class IkNode(Node):
     def __init__(self, args: DictConfig):

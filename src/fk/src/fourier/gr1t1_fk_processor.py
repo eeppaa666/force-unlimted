@@ -7,9 +7,9 @@ from std_msgs.msg import UInt8MultiArray
 
 from ik.src.common import FOURIER_IK_SOL_TOPIC, FOURIER_LOW_STATE_TOPIC
 
-from fk_processor_base import FKProcessor
-from .root_arm_fk import Gr1T1_ArmFK
-from common import FOURIER_FK_TRANSFRAME, TimeNs2GoogleTs
+from fk.src.fk_processor_base import FKProcessor
+from fk.src.fourier.root_arm_fk import Gr1T1_ArmFK
+from fk.src.common import FOURIER_FK_TRANSFRAME, TimeNs2GoogleTs
 
 # proto
 from ik.ik_sol_pb2 import IKSol

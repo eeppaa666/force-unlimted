@@ -10,10 +10,9 @@ from std_msgs.msg import UInt8MultiArray
 
 from thirdparty_sdk.fourier.robot_arm_ik_r1lite import Fourier_ArmIK
 
-from ik_processor_base import IKProcessor
-from common import FOURIER_IK_SOL_TOPIC, FOURIER_LOW_STATE_TOPIC
-from common import *
-from .hand import HandRetarget
+from ik.src.ik_processor_base import IKProcessor
+from ik.src.common import *
+from ik.src.fourier.hand import HandRetarget
 
 # proto
 from teleop.tele_pose_pb2 import TeleState

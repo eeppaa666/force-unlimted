@@ -25,8 +25,8 @@ from std_msgs.msg import UInt8MultiArray
 from teleop.tele_pose_pb2 import TeleState
 from teleop.src.common import TRACK_STATE_TOPIC
 
-from fk_processor_base import FKProcessor
-from fk_register import FK_PROCESSOR_MAP
+from fk.src.fk_processor_base import FKProcessor
+from fk.src.fk_register import FK_PROCESSOR_MAP
 
 class FkNode(Node):
     def __init__(self, args: DictConfig):

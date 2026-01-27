@@ -7,9 +7,8 @@ from std_msgs.msg import UInt8MultiArray
 
 from thirdparty_sdk.unitree.robot_arm_ik import G1_29_ArmIK
 
-from ik_processor_base import IKProcessor
-from common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC
-from common import *
+from ik.src.ik_processor_base import IKProcessor
+from ik.src.common import *
 
 # proto
 from teleop.tele_pose_pb2 import TeleState
