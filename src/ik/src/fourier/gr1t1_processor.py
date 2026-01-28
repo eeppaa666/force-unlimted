@@ -12,7 +12,7 @@ from thirdparty_sdk.fourier.robot_arm_ik_r1lite import Fourier_ArmIK
 
 from ik.src.ik_processor_base import IKProcessor
 from ik.src.common import *
-from ik.src.fourier.hand import HandRetarget
+from ik.src.hand_retarget import HandRetarget
 
 # proto
 from teleop.tele_pose_pb2 import TeleState
@@ -96,7 +96,8 @@ class Gr1T1Processor(IKProcessor):
         self._low_state_lock = threading.Lock()
         self._arm_ik = Fourier_ArmIK()
         if node.args.robot.hand:
-            self._hand_retarget = HandRetarget(cfg=node.args.robot.hand)
+            assets_dir = PROJECT_PROOT + "/../assets/fourier"
+            self._hand_retarget = HandRetarget(cfg=node.args.robot.hand, assets_dir=assets_dir)
         self.dq_num = 14
         self.hand2fingers_left = np.array([[0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=float)
         self.hand2fingers_right = np.array([[0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float)

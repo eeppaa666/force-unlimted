@@ -5,10 +5,10 @@ import numpy as np
 from rclpy.node import Node
 from std_msgs.msg import UInt8MultiArray
 
-from ik.src.common import UNITREE_LOW_STATE_TOPIC, UNITREE_IK_SOL_TOPIC, Matrix2Pose
+from ik.src.common import *
 
 from fk.src.fk_processor_base import FKProcessor
-from fk.src.unitree.root_arm_fk import G1_29_ArmFK
+from fk.src.root_fk import RobotFK
 from fk.src.common import UNITREE_FK_TRANSFRAME, TimeNs2GoogleTs
 
 # proto
@@ -44,7 +44,46 @@ class G129FKProcessor(FKProcessor):
         self._ik_sol = IKSol()
         self._ik_sol_lock = threading.Lock()
 
-        self._arm_fk = G1_29_ArmFK()
+        self.mixed_jonits = [
+            "left_hip_pitch_joint" , "left_hip_roll_joint",
+            "left_hip_yaw_joint", "left_knee_joint",
+            "left_ankle_pitch_joint", "left_ankle_roll_joint",
+
+            "right_hip_pitch_joint", "right_hip_roll_joint",
+            "right_hip_yaw_joint", "right_knee_joint",
+            "right_ankle_pitch_joint", "right_ankle_roll_joint",
+
+            "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint",
+        ]
+
+        self.active_joints = [
+            "left_shoulder_pitch_joint",
+            "left_shoulder_roll_joint",
+            "left_shoulder_yaw_joint",
+            "left_elbow_joint",
+            "left_wrist_roll_joint",
+            "left_wrist_pitch_joint",
+            "left_wrist_yaw_joint",
+            "right_shoulder_pitch_joint",
+            "right_shoulder_roll_joint",
+            "right_shoulder_yaw_joint",
+            "right_elbow_joint",
+            "right_wrist_roll_joint",
+            "right_wrist_pitch_joint",
+            "right_wrist_yaw_joint",
+
+            'left_hand_index_0_joint', 'left_hand_index_1_joint', 'left_hand_middle_0_joint',
+            'left_hand_middle_1_joint', 'left_hand_thumb_0_joint', 'left_hand_thumb_1_joint',
+            'left_hand_thumb_2_joint',
+
+            'right_hand_index_0_joint', 'right_hand_index_1_joint', 'right_hand_middle_0_joint',
+            'right_hand_middle_1_joint', 'right_hand_thumb_0_joint', 'right_hand_thumb_1_joint',
+            'right_hand_thumb_2_joint',
+        ]
+        self.urdf_path = os.path.join(PROJECT_PROOT, '../assets/unitree/g1/g1_body29_hand14.urdf')
+        self.model_dir = os.path.join(PROJECT_PROOT, '../assets/unitree/g1/')
+
+        self._arm_fk = RobotFK(urdf_path=self.urdf_path, model_dir=self.model_dir, mixed_joints=self.mixed_jonits, activate_joints=self.active_joints)
 
     def lowStateCallback(self, msg: UInt8MultiArray):
         try:
@@ -75,13 +114,14 @@ class G129FKProcessor(FKProcessor):
                     sol = IKSol()
                     sol.CopyFrom(self._ik_sol)
                 input_q = np.array(sol.dual_arm_sol_q, dtype=np.float64)
-                tfs = self._arm_fk.compute_all_fk(input_q, sol.left_hand_q, sol.right_hand_q)
+                input_q = np.concatenate([input_q, sol.left_hand_q, sol.right_hand_q])
+                tfs = self._arm_fk.compute_all_fk(input_q)
         else:
             with self._low_state_lock:
                 low_state_copy = UnitTreeLowState()
                 low_state_copy.CopyFrom(self._low_state)
             input_q = np.array(low_state_copy.dual_arm_q) if len(low_state_copy.dual_arm_q) == 14 else None
-                # cur_dual_arm_dq = np.array(low_state_copy.dual_arm_dq) if len(low_state_copy.dual_arm_dq) == 14 else None
+
             # ik_sol fk
             tfs = self._arm_fk.compute_all_fk(input_q)
 

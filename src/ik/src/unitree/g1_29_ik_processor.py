@@ -11,7 +11,7 @@ from thirdparty_sdk.unitree.robot_arm_ik import G1_29_ArmIK
 
 from ik.src.ik_processor_base import IKProcessor
 from ik.src.common import *
-from ik.src.unitree.hand import HandRetarget
+from ik.src.hand_retarget import HandRetarget
 
 # proto
 from teleop.tele_pose_pb2 import TeleState
@@ -85,7 +85,8 @@ class G129IkProcessor(IKProcessor):
             10)
 
         if "hand" in node.args.robot:
-            self._hand_retarget = HandRetarget(cfg=node.args.robot.hand)
+            assets_dir = PROJECT_PROOT + "/../assets/unitree"
+            self._hand_retarget = HandRetarget(cfg=node.args.robot.hand, assets_dir=assets_dir)
 
         # ik solution publisher
         self._publisher = node.create_publisher(UInt8MultiArray, UNITREE_IK_SOL_TOPIC, 10)

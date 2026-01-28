@@ -2,3 +2,6 @@ defaults:
   - teleop/config: config
   - ik/config: config
   - fk/config: config
+  - _self_
+
+launch: []
