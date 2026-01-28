@@ -8,3 +8,14 @@ topics:
   - /fourier/ik/sol
   - /fourier/teleoperation/debug_visiable
   - /fourier/controller/debug_visiable
+
+# run mode: repaly / live
+mode: live
+# server ip address
+ip: '0.0.0.0'
+# servier port
+port: 8765
+# ouput mcap file path
+output: ''
+
+log_level: info

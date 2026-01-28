@@ -2,6 +2,7 @@ defaults:
   - teleop/config: config
   - ik/config: config
   - fk/config: config
+  - foxglove/config: config
   - _self_
 
 launch: []

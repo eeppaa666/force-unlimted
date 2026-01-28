@@ -3,11 +3,8 @@ from rclpy.executors import SingleThreadedExecutor
 import hydra
 from omegaconf import DictConfig, OmegaConf
 import multiprocessing
-from teleop.src.teleop_server import TeleopPublisher
-from fk.src.fk_node import FkNode
-from ik.src.ik_node import IkNode
 
-DEFAULT_RUN_NODES = ["teleop", "fk", "ik"]
+DEFAULT_RUN_NODES = ["teleop", "fk", "ik", 'foxglove']
 
 # 定义一个启动函数
 def run_node(node_class, config):
@@ -35,13 +32,24 @@ def main(cfg: DictConfig):
     for node_name in node_list:
         if node_name == "teleop":
             print("Launching TeleopPublisher...")
+            from teleop.src.teleop_server import TeleopPublisher
             processes.append(multiprocessing.Process(target=run_node, args=(TeleopPublisher, cfg.teleop.config)))
+
         elif node_name == "fk":
             print("Launching FkNode...")
+            from fk.src.fk_node import FkNode
             processes.append(multiprocessing.Process(target=run_node, args=(FkNode, cfg.fk.config)))
+
         elif node_name == "ik":
             print("Launching IkNode...")
+            from ik.src.ik_node import IkNode
             processes.append(multiprocessing.Process(target=run_node, args=(IkNode, cfg.ik.config)))
+
+        elif node_name == "foxglove":
+            from foxglove.src.server import FoxgloveNode
+            print("Launching FoxgloveNode...")
+            processes.append(multiprocessing.Process(target=run_node, args=(FoxgloveNode, cfg.foxglove.config)))
+
         else:
             print(f"Unknown node type: {node_name}")
 
